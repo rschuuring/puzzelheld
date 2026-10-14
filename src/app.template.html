@@ -1,0 +1,1404 @@
+<!doctype html>
+<html lang="nl">
+<meta charset="utf-8">
+<title>Puzzelheld</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1330">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Russo+One&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Puzzelheld v1. Kid part: dark glowing game UI, calm light puzzle board. Parent part: quiet light dashboard.
+   One committed look; every colour explicit. */
+:root {
+  color-scheme: light;
+  --night: #0b1330; --night2: #15224d; --night3: #22306a;
+  --red: #ff3355; --red-deep: #b5122f; --cyan: #38e1ff; --gold: #ffcf3d; --mint: #3ddc97;
+  --soft: #b8c3e6;
+  --ink: #17172b; --paper: #eef1f8; --panel: #ffffff; --muted: #5b6078; --line: #d5dcec;
+  --ok: #1b7a46; --okbg: #e9f6ee; --warn: #8a5800; --warnbg: #fff4dc;
+  --display: "Russo One", "Arial Black", Impact, sans-serif;
+  --body: "Atkinson Hyperlegible", Verdana, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body { margin: 0; font-family: var(--body); font-size: 16px; line-height: 1.45; background: var(--night); color: #fff; }
+body.parent { background: var(--paper); color: var(--ink); }
+button { font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+#app { min-height: 100vh; }
+.kid { min-height: 100vh; background: radial-gradient(120% 70% at 80% 0%, var(--night3) 0%, var(--night2) 40%, var(--night) 100%); }
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+.center { text-align: center; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+
+/* HUD */
+.hud { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 16px; background: rgba(255,255,255,.05); border-bottom: 1px solid rgba(56,225,255,.25); }
+.badge { width: 50px; height: 50px; flex: none; border-radius: 14px; background: linear-gradient(145deg, var(--red), var(--red-deep)); box-shadow: 0 0 0 2px var(--gold), 0 0 16px rgba(255,51,85,.5); overflow: hidden; display: grid; place-items: center; }
+.badge svg { width: 100%; height: 100%; }
+.who { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+.who small { font-size: 12px; color: var(--cyan); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+.who strong { font-family: var(--display); font-weight: 400; font-size: 21px; }
+.xp { flex: 1 1 220px; min-width: 160px; display: flex; flex-direction: column; gap: 4px; }
+.xp .lab { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.xp .lab b { color: var(--gold); }
+.bar { height: 14px; background: rgba(255,255,255,.12); border-radius: 8px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--cyan), #8af1ff); box-shadow: 0 0 12px var(--cyan); transition: width .6s ease; }
+.coins { display: flex; align-items: center; gap: 8px; background: rgba(255,207,61,.14); border: 1px solid rgba(255,207,61,.6); border-radius: 999px; padding: 4px 14px 4px 5px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gold); }
+.coin { width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff1b0, var(--gold) 55%, #c98f00); display: inline-grid; place-items: center; font-size: 12px; font-weight: 700; color: #6b4a00; flex: none; }
+.hudbtn { border: 0; background: rgba(255,255,255,.08); color: #fff; border-radius: 12px; padding: 8px 12px; cursor: pointer; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; }
+.hudbtn:hover { background: rgba(255,255,255,.16); }
+
+.cta { font-family: var(--display); font-size: 21px; background: linear-gradient(180deg, #ff5573, var(--red) 50%, var(--red-deep)); color: #fff; border: 0; border-radius: 14px; padding: 12px 26px; cursor: pointer; box-shadow: 0 6px 0 #7a0a1f, 0 0 22px rgba(255,51,85,.45); }
+.cta:active { transform: translateY(3px); box-shadow: 0 3px 0 #7a0a1f; }
+.cta[disabled] { opacity: .45; cursor: default; }
+.ghost { border: 0; background: rgba(56,225,255,.12); color: #fff; box-shadow: inset 0 0 0 1px var(--cyan); border-radius: 12px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
+
+/* start + forms */
+.logo { font-family: var(--display); font-size: clamp(40px, 8vw, 64px); line-height: 1; }
+.logo span { color: var(--red); text-shadow: 0 0 18px rgba(255,51,85,.6); }
+.pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 520px; width: 100%; margin: 0 auto; }
+.who-card { border: 0; color: #fff; cursor: pointer; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(56,225,255,.3); }
+.who-card:hover, .who-card.sel { box-shadow: inset 0 0 0 3px var(--cyan), 0 0 24px rgba(56,225,255,.3); }
+.who-card .big { width: 96px; height: 96px; border-radius: 24px; display: grid; place-items: center; overflow: hidden; }
+.who-card .big.k { background: linear-gradient(145deg, var(--red), var(--red-deep)); box-shadow: 0 0 0 3px var(--gold); }
+.who-card .big.p { background: #2a3870; }
+.who-card .big svg { width: 100%; height: 100%; }
+.who-card strong { font-family: var(--display); font-weight: 400; font-size: 22px; }
+.form { display: flex; flex-direction: column; gap: 10px; align-items: center; max-width: 420px; width: 100%; margin: 0 auto; }
+.form input[type=password], .form input[type=text], .form input[type=email] { font: inherit; font-size: 18px; padding: 10px 14px; border-radius: 12px; border: 0; background: rgba(255,255,255,.1); color: #fff; box-shadow: inset 0 0 0 1px rgba(56,225,255,.4); width: 100%; }
+.form label.chk { display: flex; gap: 8px; align-items: center; color: var(--soft); font-size: 15px; }
+.err { color: #ffb3c0; font-weight: 700; min-height: 1.4em; }
+.muted { color: var(--soft); }
+
+/* hero builder */
+.builder { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 720px) { .builder { grid-template-columns: minmax(0, 1fr); } }
+.stage { border-radius: 18px; background: radial-gradient(60% 50% at 50% 55%, rgba(56,225,255,.35), transparent 70%), rgba(255,255,255,.04); display: grid; place-items: center; padding: 10px; }
+.stage svg { width: 100%; max-width: 260px; }
+.choices { display: flex; flex-direction: column; gap: 16px; }
+.choice h3 { font-family: var(--display); font-weight: 400; font-size: 18px; margin-bottom: 8px; }
+.swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+.sw { width: 46px; height: 46px; border-radius: 50%; border: 0; cursor: pointer; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+.sw.on { box-shadow: 0 0 0 3px var(--night), 0 0 0 6px var(--cyan); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { border: 0; cursor: pointer; border-radius: 999px; padding: 8px 16px; background: rgba(255,255,255,.08); color: #fff; font-weight: 700; }
+.chip.on { background: var(--cyan); color: var(--night); }
+
+/* map */
+.map > svg { width: 100%; height: auto; display: block; border-radius: 16px; }
+.map .node { cursor: pointer; }
+.map .node:focus-visible circle { stroke: var(--gold); stroke-width: 6; }
+.mapfoot { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.wlist { display: flex; gap: 8px; flex-wrap: wrap; }
+.wchip { border-radius: 12px; padding: 6px 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); font-size: 13px; display: flex; flex-direction: column; line-height: 1.25; }
+.wchip b { font-family: var(--display); font-weight: 400; font-size: 14px; }
+.wchip span { color: var(--soft); }
+.wchip.done { border-color: rgba(255,207,61,.6); }
+.wchip.lock { opacity: .55; }
+.banner { border-radius: 14px; padding: 12px 16px; background: linear-gradient(90deg, rgba(255,207,61,.22), rgba(255,207,61,.06)); box-shadow: inset 0 0 0 1px rgba(255,207,61,.6); display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+
+/* play */
+.steps { display: flex; gap: 6px; flex-wrap: wrap; }
+.steps span { border-radius: 999px; padding: 3px 14px; font-weight: 700; font-size: 13px; letter-spacing: .08em; background: rgba(255,255,255,.08); color: var(--soft); }
+.steps span.on { background: var(--gold); color: var(--night); box-shadow: 0 0 14px rgba(255,207,61,.5); }
+.task { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; }
+.iconbtn { width: 44px; height: 44px; border: 0; border-radius: 12px; background: rgba(56,225,255,.15); box-shadow: inset 0 0 0 1px var(--cyan); display: grid; place-items: center; cursor: pointer; flex: none; }
+.board { background: #f6f8ff; color: var(--ink); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.qrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.cellbox { background: #fff; border-radius: 10px; box-shadow: 0 0 0 2px #dfe5f5; display: grid; place-items: center; line-height: 0; }
+.cellbox svg { width: 64px; height: 64px; }
+.cellbox.q { background: #fff6d6; box-shadow: 0 0 0 2px var(--gold); }
+.matrix { display: grid; gap: 6px; width: fit-content; }
+.matrix .cellbox svg { width: 72px; height: 72px; }
+.op { color: var(--muted); font-weight: 700; font-size: 14px; }
+.bigq { font-size: 22px; font-weight: 700; line-height: 1.4; }
+.opts { display: flex; gap: 12px; flex-wrap: wrap; }
+.opt { border: 0; border-radius: 14px; background: #fff; box-shadow: 0 0 0 2px #cfd8ef, 0 5px 0 #cfd8ef; padding: 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; font-weight: 700; color: var(--ink); min-width: 64px; transition: transform .1s; }
+.opt:hover:not([disabled]) { transform: translateY(-2px); box-shadow: 0 0 0 2px #8fa3d9, 0 7px 0 #cfd8ef; }
+.opt svg { width: 64px; height: 64px; }
+.opt.txt { font-size: 20px; padding: 12px 20px; min-width: 80px; }
+.opt.gone { opacity: .25; box-shadow: 0 0 0 2px #cfd8ef; cursor: default; }
+.opt.right { box-shadow: 0 0 0 4px var(--mint), 0 5px 0 #9be6c4; }
+.opt .l { font-size: 13px; color: var(--muted); }
+.bal { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.bal .one { background: #fff; border-radius: 12px; box-shadow: 0 0 0 2px #dfe5f5; padding: 4px; line-height: 0; }
+.bal .one.ask { box-shadow: 0 0 0 3px var(--gold); }
+.bal svg { width: 220px; max-width: 100%; height: auto; }
+.lg { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+.lg ol { margin: 0; padding-left: 22px; font-size: 17px; display: flex; flex-direction: column; gap: 4px; max-width: 46ch; }
+.lg table { border-collapse: collapse; }
+.lg th, .lg td { border: 2px solid #9aa6c6; padding: 4px 8px; text-align: center; font-size: 15px; }
+.lg td button { width: 40px; height: 34px; border: 0; background: #fff; cursor: pointer; font-size: 20px; font-weight: 700; }
+.lg td button.x { color: #c0392b; }
+.lg td button.v { color: var(--ok); }
+.hintrow { display: flex; gap: 10px; align-items: flex-end; }
+.hintrow .badge { width: 52px; height: 52px; }
+.bubble { background: var(--night2); color: #fff; border-radius: 14px 14px 14px 4px; padding: 10px 14px; font-size: 17px; box-shadow: inset 0 0 0 1px var(--cyan); max-width: 60ch; }
+.bubble b { color: var(--cyan); }
+.bubble.good b { color: var(--mint); }
+.bubble.sol b { color: var(--gold); }
+.nextrow { display: flex; justify-content: flex-end; }
+.newtype { border-radius: 16px; padding: 16px; background: rgba(56,225,255,.1); box-shadow: inset 0 0 0 1px var(--cyan); display: flex; flex-direction: column; gap: 12px; }
+.newtype .board { pointer-events: none; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--night2); color: #fff; box-shadow: inset 0 0 0 1px var(--gold), 0 10px 30px rgba(0,0,0,.4); border-radius: 14px; padding: 12px 18px; font-weight: 700; z-index: 50; max-width: calc(100% - 32px); }
+.overlay { position: fixed; inset: 0; background: rgba(5,9,25,.72); display: grid; place-items: center; z-index: 40; padding: 16px; }
+.modal { background: var(--night2); border-radius: 20px; padding: 22px; box-shadow: inset 0 0 0 1px var(--cyan), 0 20px 60px rgba(0,0,0,.5); max-width: 440px; width: 100%; display: flex; flex-direction: column; gap: 14px; align-items: center; text-align: center; color: #fff; }
+.modal .bigicon { width: 140px; }
+.modal h2 { font-family: var(--display); font-weight: 400; font-size: 26px; }
+.fun { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.fun button { width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); color: #fff; font-weight: 700; cursor: pointer; }
+.fun button:hover { background: var(--gold); color: var(--night); }
+.summary { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.summary span { background: rgba(255,255,255,.08); border-radius: 10px; padding: 6px 12px; font-weight: 700; }
+
+/* shop */
+.shop { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 720px) { .shop { grid-template-columns: minmax(0, 1fr); } }
+.cat h3 { font-family: var(--display); font-weight: 400; font-size: 18px; margin: 4px 0 8px; }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.item { border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #fff; text-align: left; cursor: pointer; }
+.item:hover { border-color: var(--cyan); }
+.item .ic { width: 100%; height: 64px; border-radius: 10px; background: rgba(255,255,255,.07); display: grid; place-items: center; font-size: 34px; }
+.item .ic svg { height: 56px; width: 80px; }
+.item b { font-size: 15px; }
+.price { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; font-size: 14px; }
+.item.owned .price { color: var(--mint); }
+.item.on { border-color: var(--mint); box-shadow: 0 0 14px rgba(61,220,151,.3); }
+.item.special { border-color: rgba(255,207,61,.7); }
+.item.locked { opacity: .45; cursor: default; }
+
+/* ---------- parent ---------- */
+.ptop { background: var(--panel); border-bottom: 1px solid var(--line); }
+.ptop .wrap { padding-block: 10px; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tabs button { border: 0; background: transparent; padding: 7px 12px; border-radius: 8px; color: var(--muted); cursor: pointer; font-size: 15px; }
+.tabs button.on { background: var(--ink); color: #fff; }
+.tabs .cnt { display: inline-block; min-width: 20px; border-radius: 10px; background: var(--red); color: #fff; font-size: 12px; font-weight: 700; margin-left: 4px; padding: 0 5px; }
+.pbtn { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-weight: 700; }
+.pbtn.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+.pbtn.danger { color: #a3122a; border-color: #f0c2cb; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card h2 { font-size: 18px; }
+.card h3 { font-size: 15px; }
+.alert { border-left: 5px solid var(--ok); background: var(--okbg); padding: 10px 14px; border-radius: 6px; }
+.alert.warn { border-color: #c27c00; background: var(--warnbg); }
+.alert.info { border-color: #3a5bd9; background: #eef2ff; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 720px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; background: #fff; }
+.stat .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat .l { font-size: 13px; color: var(--muted); }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 820px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.chart svg { width: 100%; height: auto; display: block; }
+.tbl { overflow-x: auto; }
+table.data { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+table.data th, table.data td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.data th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.meter { width: 90px; height: 8px; background: #eef1f7; border-radius: 4px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 6px; }
+.meter i { display: block; height: 100%; background: #2f5bd0; }
+.meter i.low { background: #c27c00; }
+.pill { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #eef1f7; color: var(--muted); }
+.pill.up { background: var(--okbg); color: var(--ok); }
+.pill.down { background: var(--warnbg); color: var(--warn); }
+.qcard { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: #fff; }
+.qcard .meta { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.qcard .meta span { color: var(--muted); }
+.qcard .board { padding: 12px; background: #f6f8ff; }
+.qcard .cellbox svg, .qcard .opt svg { width: 48px; height: 48px; }
+.qcard .matrix .cellbox svg { width: 52px; height: 52px; }
+.qcard .opt { cursor: default; }
+.qcard .opt.picked { box-shadow: 0 0 0 4px #e0a000; }
+.qcard .bigq { font-size: 17px; }
+.qcard .bal svg { width: 170px; }
+.why { font-size: 14px; background: #fffbea; border-radius: 8px; padding: 8px 10px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
+.bossrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: #fff; }
+.bossrow.open { border-color: var(--ink); background: #fffbea; }
+.starbtn { border: 2px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 12px; cursor: pointer; white-space: nowrap; font-weight: 700; }
+.starbtn.on { background: var(--gold); border-color: var(--ink); }
+.pform { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pform input, .pform select { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+.small { font-size: 13px; color: var(--muted); }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--warnbg); border-radius: 8px; padding: 8px 10px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .pulse { animation: pulse 1.8s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+  @keyframes pulse { 50% { transform: scale(1.14); opacity: .6; } }
+  .pop { animation: pop .35s ease-out; }
+  @keyframes pop { from { transform: scale(.85); opacity: 0; } }
+  .wave { animation: wave 1s ease-in-out infinite; transform-origin: 50% 90%; }
+  @keyframes wave { 50% { transform: rotate(-6deg); } }
+}
+
+/* v1: opslagstatus */
+#sync { position: fixed; right: 10px; bottom: 10px; z-index: 50; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(11,19,48,.85); color: #b8c3e6; border: 1px solid #2a3870; pointer-events: none; }
+#sync.ok { opacity: .55; }
+#sync.off { background: #fff4dc; color: #8a5800; border-color: #e7c98a; opacity: 1; }
+body.parent #sync { background: #ffffff; color: #5b6078; border-color: #d5dcec; }
+body.parent #sync.off { background: #fff4dc; color: #8a5800; }
+.auth-note { max-width: 46ch; color: var(--soft); text-align: center; }
+.linkbtn { background: none; border: 0; color: var(--cyan); text-decoration: underline; cursor: pointer; padding: 4px; }
+.pform input[type=password], .pform input[type=email], .pform input[type=text], .pform select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; color: var(--ink); }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.checks label { display: inline-flex; gap: 6px; align-items: center; }
+.okmsg { color: var(--ok); }
+/* v1: printen */
+#printout { position: fixed; inset: 0; z-index: 100; overflow: auto; background: #e9ecf3; color: #17172b; }
+#printout .pbar { position: sticky; top: 0; display: flex; gap: 10px; align-items: center; padding: 10px 16px; background: #17172b; color: #fff; }
+#printout .sheet { background: #fff; max-width: 820px; margin: 16px auto; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+#printout h1 { font-family: var(--display); font-weight: 400; font-size: 26px; margin-bottom: 4px; }
+#printout .meta { display: flex; justify-content: space-between; gap: 12px; color: #5b6078; font-size: 14px; border-bottom: 2px solid #17172b; padding-bottom: 8px; margin-bottom: 14px; }
+#printout .pq { break-inside: avoid; page-break-inside: avoid; border: 1px solid #d5dcec; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+#printout .pq h3 { font-size: 16px; margin-bottom: 6px; }
+#printout .pq .board { background: #fff; padding: 6px 0 0; }
+#printout .pq .opt { border: 1.5px solid #9aa3bd; }
+#printout .pq .lg td { min-width: 34px; height: 30px; border: 1px solid #9aa3bd; }
+#printout .ansline { margin-top: 8px; font-size: 15px; }
+#printout .answers { break-before: page; page-break-before: always; }
+#printout .answers li { margin-bottom: 6px; }
+#printout .tip { font-size: 14px; color: #5b6078; margin-bottom: 12px; }
+@media print {
+  body > *:not(#printout) { display: none !important; }
+  #printout { position: static; overflow: visible; background: #fff; }
+  #printout .pbar { display: none; }
+  #printout .sheet { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+  @page { margin: 14mm; }
+}
+</style>
+
+<div id="app"><p style="padding:40px;text-align:center;color:#b8c3e6">Laden…</p></div>
+<div id="sync" hidden></div>
+<div id="printout" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/*GENERATOR*/
+</script>
+<script>
+/* ===================== DATA ===================== */
+const DATA = /*DATA*/null;
+const CFG = /*CONFIG*/{ "url": "", "key": "" };
+const ONLINE = !!(CFG.url && CFG.key && window.supabase);
+const sb = ONLINE ? window.supabase.createClient(CFG.url, CFG.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
+const TEST_MODE = location.hash === '#test';
+
+const WORLDS = [
+  { name: 'Heldenstad', scene: 'city', sky: ['#0a1230', '#2a1b5c'], stops: ['Hoofdkwartier', 'Daken', 'Metro', 'Brug'], boss: 'De Toren', trophy: { name: 'Gouden schild', icon: '🛡️' } },
+  { name: 'Het Stadion', scene: 'stadium', sky: ['#0a1230', '#1c2b63'], stops: ['Kleedkamer', 'Trainingsveld', 'Tribune', 'Strafschopgebied'], boss: 'De Finale', trophy: { name: 'Gouden voetbal', icon: '⚽' } },
+  { name: 'De Sneeuwberg', scene: 'mountain', sky: ['#0d2350', '#4a78b8'], stops: ['Skilift', 'Piste', 'Funpark', 'Bergtop'], boss: 'De Grote Sprong', trophy: { name: 'Gouden snowboard', icon: '🏂' } },
+  { name: 'Racecircuit', scene: 'track', sky: ['#1a0f2e', '#5c2a3e'], stops: ['Garage', 'Pitstraat', 'Bochten', 'Finish'], boss: 'De Grand Prix', trophy: { name: 'Gouden stuur', icon: '🏎️' } },
+  { name: 'Badmintonhal', scene: 'hall', sky: ['#14203f', '#2c4a7a'], stops: ['Racketwinkel', 'Opwarmen', 'Toernooibaan', 'Finalebaan'], boss: 'Het Kampioenschap', trophy: { name: 'Gouden shuttle', icon: '🏸' } },
+  { name: 'Borneo', scene: 'jungle', sky: ['#0b2a2a', '#2f6b4f'], stops: ['Kuching', 'Rivier', 'Orang-oetanbos', 'Berg Kinabalu'], boss: 'De Top', trophy: { name: 'Gouden orang-oetan', icon: '🦧' } },
+  { name: 'Gamewereld', scene: 'blocks', sky: ['#120a35', '#3b1f8a'], stops: ['Kartbaan', 'Blokkenwereld', 'Raketarena', 'Eindlevel'], boss: 'De Eindbaas', trophy: { name: 'Gouden controller', icon: '🎮' } },
+  { name: 'De Keuken', scene: 'kitchen', sky: ['#2a1410', '#6b3a22'], stops: ['Markt', 'Pizzeria', 'Maleisische keuken', 'Restaurant'], boss: 'De Kookwedstrijd', trophy: { name: 'Gouden koksmuts', icon: '👨‍🍳' } },
+  { name: 'Muziekpodium', scene: 'stage', sky: ['#14051f', '#4a1460'], stops: ['Oefenruimte', 'Backstage', 'Podium', 'Stadionconcert'], boss: 'Het Grote Concert', trophy: { name: 'Gouden microfoon', icon: '🎤' } },
+  { get name() { return 'Thuis met ' + nm('nick'); }, scene: 'home', sky: ['#1b3a6b', '#7fb2e5'], stops: ['Huiskamer', 'Speeltuin', 'Zwembad', 'Verjaardagsfeest'], boss: 'Het Feest', trophy: { name: 'Gouden knuffel', icon: '🧸' } },
+  { name: 'Het Grote Toernooi', scene: 'arena', sky: ['#0a1230', '#3a2a0a'], stops: ['Ronde 1', 'Ronde 2', 'Kwartfinale', 'Halve finale'], boss: 'De Grote Finale', trophy: { name: 'Gouden beker', icon: '🏆' } },
+];
+const RANKS = [
+  ['Rookie', 0], ['Sidekick', 400], ['Held', 1000], ['Superheld', 2000],
+  ['Kapitein', 3300], ['Kampioen', 5000], ['Legende', 7000], ['Mega-Legende', 9500],
+];
+const TYPE_NAMES = { odd: 'Wat hoort er niet bij', series: 'Reeksen', matrix: 'Puzzelvakjes', analogy: 'Analogieën', text: 'Getallen en woorden', balance: 'Weegschalen', grid: 'Logica-rooster' };
+const SKINS = ['#f3cfb0', '#e3ad86', '#c98b5d', '#a8693f', '#7d4a2a', '#57301b'];
+const HAIRS = ['#20140d', '#5a3a22', '#a0662f', '#e2b65a', '#b8342a'];
+const STYLES = [['kort', 'Kort'], ['stekels', 'Stekels'], ['krullen', 'Krullen'], ['lang', 'Lang']];
+const SUITS = ['#e6334f', '#2f6fe0', '#1f9d5a', '#2b2f45', '#7b3fe0', '#f08a12'];
+const SHOP = [
+  { id: 'm-zwart', slot: 'mask', name: 'Zwart masker', price: 25, color: '#2b3150' },
+  { id: 'm-rood', slot: 'mask', name: 'Rood masker', price: 25, color: '#e6334f' },
+  { id: 'm-goud', slot: 'mask', name: 'Gouden masker', price: 60, color: '#ffcf3d' },
+  { id: 'c-rood', slot: 'cape', name: 'Rode cape', price: 40, color: '#a80f2b' },
+  { id: 'c-blauw', slot: 'cape', name: 'Blauwe cape', price: 40, color: '#1d3f9a' },
+  { id: 'c-zwart', slot: 'cape', name: 'Nachtcape', price: 60, color: '#151a33' },
+  { id: 's-wit', slot: 'shoes', name: 'Witte sneakers', price: 20, color: '#f2f4fa' },
+  { id: 's-vuur', slot: 'shoes', name: 'Vuurschoenen', price: 100, color: '#ff6a2a' },
+  { id: 's-goud', slot: 'shoes', name: 'Gouden schoenen', price: 120, color: '#ffcf3d' },
+  { id: 'e-bliksem', slot: 'emblem', name: 'Bliksem-embleem', price: 40, color: '#38e1ff' },
+  { id: 'e-ster', slot: 'emblem', name: 'Ster-embleem', price: 40, color: '#ffcf3d' },
+  { id: 'e-bal', slot: 'emblem', name: 'Voetbal-embleem', price: 50, color: '#ffffff' },
+];
+const SLOT_NAMES = { mask: 'Maskers', cape: 'Capes', shoes: 'Schoenen', emblem: 'Emblemen' };
+const TROPHY_PRICE = 250;
+const PUZZLES_PER_STOP = 8, PUZZLES_PER_BOSS = 10;
+const NUDGE_MS = 120000, SOUND_MS = 180000, PAUSE_MS = 30 * 60000;
+
+/* ===================== STATE ===================== */
+let KEY = 'puzzelheld-v1-lokaal';
+let USER = null;
+function fresh() {
+  return {
+    v: 2, kid: null, parentHash: null, savedAt: 0,
+    prog: { world: 0, stop: 0, season: 1, d: 11, recent: [] },
+    run: null, attempts: [], stops: [], bosses: [], events: [], days: {}, inbox: [], seen: {}, retry: [],
+  };
+}
+let S;
+function load() { try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : fresh(); } catch (e) { S = fresh(); } }
+function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* opslag niet beschikbaar: werkt alleen tijdens deze sessie */ } }
+function save() { S.savedAt = Date.now(); saveLocal(); if (ONLINE && USER) schedulePush(); }
+
+/* Instellingen die bij dit apparaat horen (niet gedeeld tussen apparaten) */
+const DEV = 'puzzelheld-v1-apparaat';
+function devGet() { try { return JSON.parse(localStorage.getItem(DEV)) || {}; } catch (e) { return {}; } }
+function devSet(p) { try { localStorage.setItem(DEV, JSON.stringify(Object.assign(devGet(), p))); } catch (e) { /* niets */ } }
+
+/* ===================== ONLINE OPSLAG (Supabase) ===================== */
+let pushT = null, syncState = 'ok';
+function setSync(st) {
+  syncState = st; const el = document.getElementById('sync'); if (!el || !ONLINE || !USER) return;
+  el.hidden = false; el.className = st;
+  el.textContent = st === 'ok' ? 'Opgeslagen' : st === 'wait' ? 'Opslaan…' : 'Geen internet: wordt later opgeslagen';
+}
+function schedulePush() { clearTimeout(pushT); setSync('wait'); pushT = setTimeout(push, 2500); }
+async function push() {
+  clearTimeout(pushT); pushT = null; if (!USER) return;
+  try {
+    const { error } = await sb.from('puzzelheld_state').upsert({ user_id: USER.id, state: S, updated_at: new Date().toISOString() });
+    if (error) throw error; setSync('ok');
+  } catch (e) { setSync('off'); }
+}
+/* Haalt de online stand op. De nieuwste stand (savedAt) wint. Geeft true als de online stand is overgenomen. */
+async function pull() {
+  if (!USER) return false;
+  try {
+    const { data, error } = await sb.from('puzzelheld_state').select('state').eq('user_id', USER.id).maybeSingle();
+    if (error) throw error;
+    setSync('ok');
+    const remote = data && data.state;
+    if (remote && (remote.savedAt || 0) > (S.savedAt || 0)) { S = remote; saveLocal(); return true; }
+    if (!remote || (S.savedAt || 0) > (remote.savedAt || 0)) schedulePush();
+  } catch (e) { setSync('off'); }
+  return false;
+}
+window.addEventListener('online', () => { if (ONLINE && USER && syncState === 'off') push(); });
+window.addEventListener('pagehide', () => { if (pushT) push(); });
+
+/* Wachtwoord van het kind: alleen een hash bewaren, nooit het wachtwoord zelf */
+async function hashPw(pw) {
+  const s = 'puzzelheld:' + pw;
+  if (window.crypto && crypto.subtle && window.TextEncoder) {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return 'h1:' + Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+  let h = 5381; for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return 'h0:' + h.toString(16);
+}
+
+/* Namen staan niet in de openbare code. In de puzzels staan {K} (kind), {B} (broertje) en {N} (bijnaam broertje).
+   De ouder vult de echte namen in bij Account; ze worden alleen in de online opslag bewaard. */
+function nm(k) {
+  const n = (S && S.names) || {};
+  if (k === 'kid') return (S && S.kid && S.kid.name) || 'je kind';
+  if (k === 'brother') return n.brother || 'Marcus';
+  return n.nick || 'Macage';
+}
+function KN() { return S && S.kid ? S.kid.name : 'je kind'; }
+const fillStr = s => s.replace(/\{K\}/g, (S && S.kid && S.kid.name) || 'Sam').replace(/\{B\}/g, nm('brother')).replace(/\{N\}/g, nm('nick'));
+function fillDeep(v) { return typeof v === 'string' ? fillStr(v) : Array.isArray(v) ? v.map(fillDeep) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fillDeep(x)])) : v; }
+const ITEMS = {}; DATA.items.forEach(it => { ITEMS[it.id] = it; });
+/* Puzzels uit de puzzelmaker hebben een id als G:matrix:12:83451. Daarmee is de puzzel altijd precies terug te maken. */
+const GEN_CACHE = {};
+function getItem(id) {
+  if (ITEMS[id]) return fillDeep(ITEMS[id]);
+  if (typeof id === 'string' && id.startsWith('G:') && typeof GEN !== 'undefined') { if (!(id in GEN_CACHE)) GEN_CACHE[id] = GEN.fromId(id); return GEN_CACHE[id]; }
+  return null;
+}
+function genId(type, d) {
+  for (let k = 0; k < 20; k++) {
+    const lvl = Math.max(1, Math.min(20, d + [-1, 0, 0, 1][Math.floor(Math.random() * 4)]));
+    const id = `G:${type}:${lvl}:${Math.floor(Math.random() * 1e9)}`;
+    if (S.seen[id]) continue;
+    if (getItem(id)) return id;
+  }
+  return null;
+}
+const EXAMPLES = {}; DATA.examples.forEach(e => { EXAMPLES[e.type] = e; });
+
+/* ===================== HELPERS ===================== */
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => n.toLocaleString('nl-NL');
+const dayKey = (t = Date.now()) => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function rankOf(xp) { let i = 0; RANKS.forEach((r, k) => { if (xp >= r[1]) i = k; }); return i; }
+function groupLabel(d) { return d <= 5 ? 'groep 3–4' : d <= 10 ? 'groep 4–5' : d <= 15 ? 'groep 5–6' : 'groep 6–7'; }
+function worldOf(i) { return WORLDS[i % WORLDS.length]; }
+function minutes(ms) { const m = Math.round(ms / 60000); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' u ' + (m % 60) + ' m'; }
+let toastTimer;
+function toast(msg) { let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.innerHTML = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
+function speak(text) { try { const u = new SpeechSynthesisUtterance(text); u.lang = 'nl-NL'; u.rate = .95; const v = speechSynthesis.getVoices().find(x => /^nl/i.test(x.lang)); if (v) u.voice = v; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { toast('Voorlezen werkt niet in deze browser.'); } }
+function chime() { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); [660, 880, 990].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, ctx.currentTime + i * .18); g.gain.linearRampToValueAtTime(.25, ctx.currentTime + i * .18 + .03); g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + i * .18 + .5); o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + i * .18); o.stop(ctx.currentTime + i * .18 + .55); }); } catch (e) { } }
+
+/* ===================== FIGURES (port of render.py) ===================== */
+const COLORS = { rood: '#d62828', blauw: '#1d4ed8', geel: '#f4c20d', groen: '#2a9d3f', oranje: '#f77f00', zwart: '#222222', paars: '#7b2cbf' };
+const SZ1 = { s: 15, m: 25, l: 38 }, SZN = { s: 9, m: 13, l: 17 };
+const LAYOUT = { 1: [[50, 50]], 2: [[28, 50], [72, 50]], 3: [[28, 32], [72, 32], [50, 72]], 4: [[30, 30], [70, 30], [30, 70], [70, 70]], 5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]], 6: [[25, 30], [50, 30], [75, 30], [25, 70], [50, 70], [75, 70]] };
+const pts = a => a.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+function shape(kind, cx, cy, r, color, fill, rot) {
+  const c = COLORS[color] || color;
+  const st = fill === 'leeg' ? `fill="white" stroke="${c}" stroke-width="3.5"` : `fill="${c}" stroke="#222" stroke-width="1.5"`;
+  let b;
+  if (kind === 'rondje') b = `<circle r="${r}" ${st}/>`;
+  else if (kind === 'vierkant') { const s = r * .85; b = `<rect x="${-s}" y="${-s}" width="${2 * s}" height="${2 * s}" ${st}/>`; }
+  else if (kind === 'driehoek') b = `<polygon points="${pts([[0, -r], [r * .95, r * .75], [-r * .95, r * .75]])}" ${st}/>`;
+  else if (kind === 'ster') { const p = []; for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * .45 : r, a = -Math.PI / 2 + i * Math.PI / 5; p.push([rr * Math.cos(a), rr * Math.sin(a)]); } b = `<polygon points="${pts(p)}" ${st}/>`; }
+  else if (kind === 'ruit') b = `<polygon points="${pts([[0, -r], [r * .72, 0], [0, r], [-r * .72, 0]])}" ${st}/>`;
+  else if (kind === 'zeshoek') { const p = []; for (let i = 0; i < 6; i++) p.push([r * Math.cos(Math.PI / 3 * i), r * Math.sin(Math.PI / 3 * i)]); b = `<polygon points="${pts(p)}" ${st}/>`; }
+  else if (kind === 'pijl') b = `<polygon points="${pts([[0, -r], [.75 * r, -.05 * r], [.3 * r, -.05 * r], [.3 * r, r], [-.3 * r, r], [-.3 * r, -.05 * r], [-.75 * r, -.05 * r]])}" ${st}/>`;
+  else b = '';
+  return `<g transform="translate(${cx},${cy}) rotate(${rot || 0})">${b}</g>`;
+}
+const LINES = { h: 'M12,50 L88,50', v: 'M50,12 L50,88', d1: 'M14,14 L86,86', d2: 'M86,14 L14,86', t: 'M12,12 L88,12', b: 'M12,88 L88,88', l: 'M12,12 L12,88', r: 'M88,12 L88,88' };
+function figInner(f) {
+  if (f.k === 'raster') {
+    const filled = {}; (f.p || []).forEach(p => { if (Array.isArray(p)) filled[p[0]] = p[1]; else filled[p] = f.c; });
+    let o = ''; for (let i = 0; i < 9; i++) { const r = Math.floor(i / 3), c = i % 3; o += `<rect x="${8 + c * 28}" y="${8 + r * 28}" width="28" height="28" fill="${filled[i] !== undefined ? COLORS[filled[i]] : 'white'}" stroke="#555" stroke-width="2"/>`; }
+    return o;
+  }
+  if (f.k === 'lijnen') { const c = COLORS[f.c]; return (f.p || []).map(code => code === 'o' ? `<circle cx="50" cy="50" r="22" fill="none" stroke="${c}" stroke-width="6"/>` : `<path d="${LINES[code]}" stroke="${c}" stroke-width="6" stroke-linecap="round" fill="none"/>`).join(''); }
+  if (f.k === 'combi') { const [a, b] = f.p; return shape(a.k, 50, 50, 40, a.c, a.f || 'vol', a.r) + shape(b.k, 50, 50, 15, b.c, b.f || 'vol', b.r); }
+  const n = f.n || 1, r = n === 1 ? SZ1[f.s || 'm'] : SZN[f.s || 'm'];
+  return LAYOUT[n].map(([x, y]) => shape(f.k, x, y, r, f.c, f.f || 'vol', f.r)).join('');
+}
+function fig(f) {
+  if (!f) return '<svg viewBox="0 0 100 100" aria-label="vraagteken"><text x="50" y="68" text-anchor="middle" font-size="56" font-weight="bold" fill="#b58600">?</text></svg>';
+  return `<svg viewBox="0 0 100 100">${figInner(f)}</svg>`;
+}
+let clipN = 0;
+function icon(kind, x, y, s = 19) {
+  if (kind === 'voetbal') {
+    const id = 'vb' + (++clipN);
+    const pent = (cx, cy, r, a0 = -Math.PI / 2) => pts([0, 1, 2, 3, 4].map(i => [cx + r * Math.cos(a0 + i * 2 * Math.PI / 5), cy + r * Math.sin(a0 + i * 2 * Math.PI / 5)]));
+    let patches = ''; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + Math.PI / 5 + i * 2 * Math.PI / 5; patches += `<polygon points="${pent(x + s * 1.02 * Math.cos(a), y + s * 1.02 * Math.sin(a), s * .38, Math.PI / 2)}" fill="#222"/>`; }
+    return `<clipPath id="${id}"><circle cx="${x}" cy="${y}" r="${s}"/></clipPath><circle cx="${x}" cy="${y}" r="${s}" fill="white"/><g clip-path="url(#${id})">${patches}</g><polygon points="${pent(x, y, s * .36)}" fill="#222"/><circle cx="${x}" cy="${y}" r="${s}" fill="none" stroke="#222" stroke-width="1.8"/>`;
+  }
+  if (kind === 'shuttle') return `<polygon points="${pts([[x - s * .85, y - s], [x + s * .85, y - s], [x + s * .38, y + s * .35], [x - s * .38, y + s * .35]])}" fill="white" stroke="#555" stroke-width="1.5"/><line x1="${x}" y1="${y - s}" x2="${x}" y2="${y + s * .35}" stroke="#999"/><ellipse cx="${x}" cy="${y + s * .62}" rx="${s * .48}" ry="${s * .38}" fill="#d62828" stroke="#222" stroke-width="1.2"/>`;
+  if (kind === 'banaan') return `<g transform="translate(${x},${y}) rotate(-20)"><path d="M${-s},${-s * .55} Q0,${s * 1.15} ${s},${-s * .55} Q0,${s * .3} ${-s},${-s * .55} Z" fill="#f4c20d" stroke="#7a5a00" stroke-width="1.8" stroke-linejoin="round"/><circle cx="${-s}" cy="${-s * .55}" r="${s * .12}" fill="#4a3600"/><rect x="${s * .88}" y="${-s * .75}" width="${s * .22}" height="${s * .3}" fill="#4a3600"/></g>`;
+  if (kind === 'kokosnoot') return `<circle cx="${x}" cy="${y}" r="${s}" fill="#7f4f24" stroke="#3b2410" stroke-width="1.6"/><circle cx="${x - s * .3}" cy="${y - s * .3}" r="${s * .14}" fill="#2b1a0b"/><circle cx="${x + s * .3}" cy="${y - s * .3}" r="${s * .14}" fill="#2b1a0b"/><circle cx="${x}" cy="${y + s * .12}" r="${s * .14}" fill="#2b1a0b"/>`;
+  return '';
+}
+function pan(items, cx) {
+  if (items === '?') return `<text x="${cx}" y="150" text-anchor="middle" font-size="44" font-weight="bold" fill="#b58600">?</text>`;
+  const flat = []; items.forEach(([k, n]) => { for (let i = 0; i < n; i++) flat.push(k); });
+  return flat.map((k, i) => { const row = Math.floor(i / 3), col = i % 3, inRow = Math.min(3, flat.length - row * 3); return icon(k, cx - (inRow - 1) * 20 + col * 40, 136 - row * 38); }).join('');
+}
+function balance(left, right) {
+  return `<svg viewBox="0 0 340 175"><polygon points="170,40 148,172 192,172" fill="#ccc" stroke="#555" stroke-width="2"/><line x1="15" y1="40" x2="325" y2="40" stroke="#555" stroke-width="5" stroke-linecap="round"/><circle cx="170" cy="40" r="6" fill="#555"/><line x1="72" y1="40" x2="8" y2="158" stroke="#bbb" stroke-width="1.3"/><line x1="72" y1="40" x2="136" y2="158" stroke="#bbb" stroke-width="1.3"/><line x1="268" y1="40" x2="204" y2="158" stroke="#bbb" stroke-width="1.3"/><line x1="268" y1="40" x2="332" y2="158" stroke="#bbb" stroke-width="1.3"/><path d="M4,158 Q72,174 140,158 Z" fill="#888" stroke="#555"/><path d="M200,158 Q268,174 336,158 Z" fill="#888" stroke="#555"/>${pan(left, 72)}${pan(right, 268)}</svg>`;
+}
+
+/* ===================== HERO ===================== */
+function shade(hex, f) { const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255; r = Math.round(r * f); g = Math.round(g * f); b = Math.round(b * f); const c = v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0'); return '#' + c(r) + c(g) + c(b); }
+function hairPath(style, col) {
+  const s = 'stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"';
+  if (style === 'stekels') return `<path d="M72 46 Q70 18 92 14 L88 6 L102 12 L106 2 L114 14 L126 10 L122 22 Q132 32 128 48 Q120 32 104 30 Q86 30 72 46 Z" fill="${col}" ${s}/>`;
+  if (style === 'krullen') return `<g fill="${col}" ${s}>${[[76, 40], [80, 27], [91, 19], [104, 17], [116, 22], [124, 33], [126, 45]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="10"/>`).join('')}</g>`;
+  if (style === 'lang') return `<path d="M70 50 Q66 14 100 14 Q134 14 130 50 L132 78 Q124 74 122 58 Q118 32 100 30 Q82 32 78 58 Q76 74 68 78 Z" fill="${col}" ${s}/>`;
+  return `<path d="M73 46 Q70 18 100 16 Q130 18 127 46 Q120 30 100 29 Q80 30 73 46 Z" fill="${col}" ${s}/>`;
+}
+function face(h, eq) {
+  const mask = eq.mask ? SHOP.find(x => x.id === eq.mask) : null;
+  let o = `<path d="M74 50 Q74 22 100 22 Q126 22 126 50 Q126 80 100 84 Q74 80 74 50 Z" fill="${h.skin}" stroke="#0b0f20" stroke-width="3"/>`;
+  if (mask) {
+    o += `<path d="M70 44 Q100 34 130 44 L128 60 Q100 54 72 60 Z" fill="${mask.color}" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/><path d="M80 50 L96 48 L94 56 L83 56 Z" fill="#fff" stroke="#0b0f20" stroke-width="2"/><path d="M120 50 L104 48 L106 56 L117 56 Z" fill="#fff" stroke="#0b0f20" stroke-width="2"/>`;
+  } else {
+    o += `<ellipse cx="89" cy="52" rx="6" ry="5" fill="#fff" stroke="#0b0f20" stroke-width="1.5"/><ellipse cx="111" cy="52" rx="6" ry="5" fill="#fff" stroke="#0b0f20" stroke-width="1.5"/><circle cx="90" cy="53" r="2.8" fill="#2a1a10"/><circle cx="112" cy="53" r="2.8" fill="#2a1a10"/><path d="M82 43 L95 42 M105 42 L118 43" stroke="#0b0f20" stroke-width="3" stroke-linecap="round"/>`;
+  }
+  o += `<path d="M92 70 Q100 75 108 70" fill="none" stroke="#0b0f20" stroke-width="2.5" stroke-linecap="round"/>`;
+  o += hairPath(h.hairStyle, h.hair);
+  return o;
+}
+function emblem(h, eq) {
+  const e = eq.emblem;
+  if (e === 'e-bliksem') return `<path d="M100 98 L120 112 L100 140 L80 112 Z" fill="#1d3f9a" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/><path d="M103 103 L92 118 L100 118 L96 132 L109 114 L101 114 Z" fill="#38e1ff" stroke="#0b0f20" stroke-width="1.2" stroke-linejoin="round"/>`;
+  if (e === 'e-ster') return `<path d="M100 98 L120 112 L100 140 L80 112 Z" fill="#1d3f9a" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/>${shape('ster', 100, 117, 13, '#ffcf3d', 'vol', 0)}`;
+  if (e === 'e-bal') return `<circle cx="100" cy="117" r="17" fill="#1d3f9a" stroke="#0b0f20" stroke-width="2.5"/><g>${icon('voetbal', 100, 117, 12)}</g>`;
+  const letter = esc((h.heroName || 'L').trim().charAt(0).toUpperCase() || 'L');
+  return `<path d="M100 98 L120 112 L100 140 L80 112 Z" fill="#ffcf3d" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/><text x="100" y="124" text-anchor="middle" font-family="Russo One, Arial Black, sans-serif" font-size="18" fill="#0b0f20">${letter}</text>`;
+}
+function heroSVG(h, eq = {}, cls = '') {
+  const suit = h.suit, dark = shade(suit, .55), legs = shade(suit, .75);
+  const cape = eq.cape ? SHOP.find(x => x.id === eq.cape).color : null;
+  const shoe = eq.shoes ? SHOP.find(x => x.id === eq.shoes).color : shade(suit, .45);
+  const st = 'stroke="#0b0f20" stroke-width="3" stroke-linejoin="round"';
+  return `<svg viewBox="0 0 200 270" class="${cls}" role="img" aria-label="Held ${esc(h.heroName || '')}">
+    <ellipse cx="100" cy="150" rx="95" ry="120" fill="#38e1ff" opacity=".12"/>
+    ${cape ? `<path d="M66 92 C40 140 30 200 22 258 C55 244 80 262 100 248 C122 262 148 244 180 256 C170 200 160 140 134 92 Z" fill="${cape}" ${st}/>` : ''}
+    <path d="M84 168 L76 232 L94 232 L100 180 L106 232 L124 232 L116 168 Z" fill="${legs}" ${st}/>
+    <path d="M74 228 L95 228 L97 252 L66 252 Q66 238 74 228 Z" fill="${shoe}" ${st}/>
+    <path d="M105 228 L126 228 Q134 238 134 252 L103 252 Z" fill="${shoe}" ${st}/>
+    <path d="M66 98 Q46 122 52 146 Q60 160 82 160" fill="none" stroke="#0b0f20" stroke-width="21" stroke-linecap="round"/>
+    <path d="M66 98 Q46 122 52 146 Q60 160 82 160" fill="none" stroke="${legs}" stroke-width="15" stroke-linecap="round"/>
+    <path d="M134 98 Q154 122 148 146 Q140 160 118 160" fill="none" stroke="#0b0f20" stroke-width="21" stroke-linecap="round"/>
+    <path d="M134 98 Q154 122 148 146 Q140 160 118 160" fill="none" stroke="${legs}" stroke-width="15" stroke-linecap="round"/>
+    <path d="M62 90 Q100 80 138 90 L130 128 L118 172 L82 172 L70 128 Z" fill="${suit}" ${st}/>
+    <path d="M70 128 L82 172 L90 172 L84 120 Z M130 128 L118 172 L110 172 L116 120 Z" fill="${dark}" opacity=".6"/>
+    ${emblem(h, eq)}
+    <rect x="80" y="160" width="40" height="11" rx="3" fill="#ffcf3d" stroke="#0b0f20" stroke-width="2.5"/>
+    <rect x="91" y="74" width="18" height="16" fill="${shade(h.skin, .85)}" stroke="#0b0f20" stroke-width="2.5"/>
+    ${face(h, eq)}
+  </svg>`;
+}
+function headSVG(h, eq = {}) { return `<svg viewBox="62 0 76 88" aria-hidden="true">${face(h, eq)}</svg>`; }
+
+/* ===================== SCENES ===================== */
+function scene(w, idx) {
+  const [s1, s2] = w.sky, id = 'sky' + idx;
+  let g = '';
+  switch (w.scene) {
+    case 'city':
+      g = `<g fill="#202c66" stroke="#2f3d80" stroke-width="2">${[[0, 150, 70, 250], [70, 110, 60, 290], [130, 170, 80, 230], [210, 90, 50, 310], [260, 140, 90, 260], [350, 120, 70, 280], [420, 60, 60, 340], [480, 150, 80, 250], [560, 100, 60, 300], [620, 160, 90, 240], [710, 120, 90, 280]].map(([x, y, ww, hh]) => `<rect x="${x}" y="${y}" width="${ww}" height="${hh}"/>`).join('')}</g><g fill="#ffcf3d" opacity=".5">${Array.from({ length: 40 }, (_, i) => `<rect x="${(i * 97) % 780 + 10}" y="${(i * 53) % 150 + 130}" width="6" height="9"/>`).join('')}</g><rect y="300" width="800" height="100" fill="#1b2150"/>`; break;
+    case 'stadium':
+      g = `<polygon points="70,40 30,40 170,330 330,330" fill="#fffbe0" opacity=".14"/><polygon points="730,40 770,40 630,330 470,330" fill="#fffbe0" opacity=".14"/><g fill="#0b0f20"><rect x="44" y="40" width="12" height="150"/><rect x="744" y="40" width="12" height="150"/></g><g fill="#fffbe0"><rect x="26" y="26" width="48" height="18" rx="3"/><rect x="726" y="26" width="48" height="18" rx="3"/></g><path d="M0 210 Q400 90 800 210 L800 260 L0 260 Z" fill="#22306a"/><rect y="250" width="800" height="150" fill="#1e8a4c"/><g stroke="#fff" stroke-opacity=".35" stroke-width="3" fill="none"><path d="M40 395 L120 255 L680 255 L760 395"/><line x1="400" y1="255" x2="400" y2="400"/><ellipse cx="400" cy="320" rx="80" ry="30"/></g>`; break;
+    case 'mountain':
+      g = `<polygon points="-20,300 180,70 380,300" fill="#3c5a8a"/><polygon points="180,70 230,128 200,120 170,140 140,118" fill="#fff"/><polygon points="250,300 480,40 720,300" fill="#2e4a78"/><polygon points="480,40 540,108 505,98 470,122 435,100" fill="#fff"/><polygon points="560,300 720,120 880,300" fill="#3c5a8a"/><path d="M0 280 Q400 240 800 290 L800 400 L0 400 Z" fill="#eef4ff"/><g fill="#fff">${Array.from({ length: 30 }, (_, i) => `<circle cx="${(i * 131) % 800}" cy="${(i * 37) % 230}" r="2"/>`).join('')}</g><line x1="60" y1="60" x2="460" y2="280" stroke="#0b0f20" stroke-width="3"/>`; break;
+    case 'track':
+      g = `<rect y="230" width="800" height="170" fill="#2b7a3a"/><path d="M-20 360 Q200 230 400 300 T820 250" fill="none" stroke="#3a3a46" stroke-width="70"/><path d="M-20 360 Q200 230 400 300 T820 250" fill="none" stroke="#fff" stroke-width="72" stroke-dasharray="18 18" opacity=".55"/><path d="M-20 360 Q200 230 400 300 T820 250" fill="none" stroke="#3a3a46" stroke-width="62"/><rect x="40" y="150" width="200" height="80" fill="#1a1426"/><rect x="560" y="140" width="220" height="90" fill="#1a1426"/><g fill="#ff3355">${[0, 1, 2, 3, 4, 5].map(i => `<rect x="${60 + i * 30}" y="160" width="18" height="10"/>`).join('')}</g>`; break;
+    case 'hall':
+      g = `<rect y="0" width="800" height="230" fill="#22355f"/><g stroke="#38e1ff" stroke-opacity=".25">${[100, 250, 400, 550, 700].map(x => `<line x1="${x}" y1="0" x2="${x}" y2="230"/>`).join('')}</g><rect y="230" width="800" height="170" fill="#b8763e"/><g stroke="#fff" stroke-width="3" fill="none" opacity=".75"><path d="M60 395 L160 245 L640 245 L740 395 Z"/><line x1="400" y1="245" x2="400" y2="395"/></g><rect x="90" y="205" width="620" height="38" fill="none" stroke="#e8edf7" stroke-width="2" stroke-dasharray="4 4"/><line x1="90" y1="205" x2="710" y2="205" stroke="#fff" stroke-width="4"/>`; break;
+    case 'jungle':
+      g = `<path d="M0 220 Q150 120 300 210 T600 190 T800 200 L800 400 L0 400 Z" fill="#1d4d36"/><g fill="#2f7a4f">${Array.from({ length: 14 }, (_, i) => `<circle cx="${i * 60 + 20}" cy="${200 + (i % 3) * 12}" r="${38 + (i % 4) * 6}"/>`).join('')}</g><path d="M0 330 Q200 300 400 340 T800 320 L800 360 Q600 350 400 370 T0 360 Z" fill="#3a8fb7"/><rect y="360" width="800" height="40" fill="#24603f"/><polygon points="520,210 600,60 680,210" fill="#3b5a48"/>`; break;
+    case 'blocks':
+      g = `<g>${Array.from({ length: 20 }, (_, i) => `<rect x="${i * 40}" y="${250 - (i % 5) * 20}" width="40" height="${150 + (i % 5) * 20}" fill="${i % 2 ? '#5b3a1e' : '#6b4524'}"/><rect x="${i * 40}" y="${250 - (i % 5) * 20}" width="40" height="14" fill="#3ccf5a"/>`).join('')}</g><g fill="#ffcf3d">${[[120, 120], [520, 90], [660, 150]].map(([x, y]) => `<rect x="${x}" y="${y}" width="34" height="34" stroke="#8a5a00" stroke-width="3"/><text x="${x + 17}" y="${y + 26}" text-anchor="middle" font-size="24" font-weight="bold" fill="#8a5a00">?</text>`).join('')}</g>`; break;
+    case 'kitchen':
+      g = `<g fill="#3d2418">${Array.from({ length: 64 }, (_, i) => `<rect x="${(i % 16) * 50 + 2}" y="${Math.floor(i / 16) * 50 + 52}" width="46" height="46" opacity="${.5 + (i % 3) * .15}"/>`).join('')}</g><rect y="250" width="800" height="150" fill="#8a5a3a"/><rect y="240" width="800" height="18" fill="#d9d4cc"/><rect x="560" y="110" width="170" height="130" rx="12" fill="#2b2b33"/><rect x="580" y="140" width="130" height="80" rx="40" fill="#ff7a2a" opacity=".7"/>`; break;
+    case 'stage':
+      g = `${[120, 300, 500, 680].map((x, i) => `<polygon points="${x - 10},0 ${x + 10},0 ${x + 120 - i * 60},300 ${x - 120 + i * 60 + 40},300" fill="${['#ff3355', '#38e1ff', '#ffcf3d', '#a855f7'][i]}" opacity=".16"/>`).join('')}<rect y="250" width="800" height="150" fill="#1a0a24"/><rect x="60" y="230" width="680" height="30" fill="#2c1238"/><rect x="40" y="150" width="70" height="100" rx="8" fill="#0b0b12"/><rect x="690" y="150" width="70" height="100" rx="8" fill="#0b0b12"/><circle cx="75" cy="185" r="20" fill="#222" stroke="#444" stroke-width="4"/><circle cx="725" cy="185" r="20" fill="#222" stroke="#444" stroke-width="4"/>`; break;
+    case 'home':
+      g = `<circle cx="680" cy="70" r="36" fill="#ffe28a"/><rect y="250" width="800" height="150" fill="#5fae5a"/><polygon points="120,150 240,70 360,150" fill="#c2453a"/><rect x="140" y="150" width="200" height="110" fill="#f2e3c6"/><rect x="220" y="195" width="40" height="65" fill="#7a4a2a"/><rect x="160" y="170" width="40" height="35" fill="#8fd0ff"/><rect x="280" y="170" width="40" height="35" fill="#8fd0ff"/><line x1="520" y1="250" x2="560" y2="140" stroke="#8a5a3a" stroke-width="8"/><line x1="640" y1="250" x2="600" y2="140" stroke="#8a5a3a" stroke-width="8"/><line x1="550" y1="140" x2="610" y2="140" stroke="#8a5a3a" stroke-width="8"/><line x1="580" y1="140" x2="580" y2="210" stroke="#555" stroke-width="2"/><rect x="565" y="210" width="30" height="6" fill="#ff3355"/>`; break;
+    default:
+      g = `<path d="M0 200 Q400 70 800 200 L800 260 L0 260 Z" fill="#4a3a12"/><rect y="250" width="800" height="150" fill="#1e8a4c"/><g fill="#ffcf3d" opacity=".6">${Array.from({ length: 24 }, (_, i) => `<circle cx="${i * 34 + 10}" cy="${190 - Math.sin(i / 3.7) * 50}" r="4"/>`).join('')}</g>`;
+  }
+  return `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${s1}"/><stop offset="1" stop-color="${s2}"/></linearGradient></defs><rect width="800" height="400" fill="url(#${id})"/>${g}`;
+}
+const NODES = [[90, 340], [250, 320], [400, 335], [560, 305], [705, 280]];
+
+/* ===================== GAME LOGIC ===================== */
+function ensureDay(t = Date.now()) { const k = dayKey(t); if (!S.days[k]) S.days[k] = { ms: 0, nudges: 0, bonus: false, pause: false }; return S.days[k]; }
+function addXP(n, why) { const before = rankOf(S.kid.xp); S.kid.xp += n; const after = rankOf(S.kid.xp); if (after > before) pendingRankUp = after; return n; }
+let pendingRankUp = null;
+
+function pickItems(n, boss) {
+  const d = S.prog.d;
+  const chosen = [];
+  // terugkomers: eerder niet zelf opgelost
+  S.retry.filter(id => getItem(id)).slice(0, boss ? 1 : 2).forEach(id => chosen.push(id));
+  // eerst nog niet gespeelde puzzels uit het lesprogramma rond dit niveau, daarna de puzzelmaker
+  const byType = {};
+  shuffle(DATA.items.filter(it => it.lvl >= d - 1 && it.lvl <= d + 1 && !S.seen[it.id] && !chosen.includes(it.id))).forEach(it => { (byType[it.type] = byType[it.type] || []).push(it.id); });
+  const types = shuffle(Object.keys(TYPE_NAMES));
+  let guard = 0;
+  while (chosen.length < n && guard++ < 50) {
+    for (const t of types) {
+      if (chosen.length >= n) break;
+      const id = (byType[t] || []).shift() || (typeof GEN !== 'undefined' ? genId(t, d) : null);
+      if (id && !chosen.includes(id)) chosen.push(id);
+    }
+  }
+  return shuffle(chosen).map(id => ({ id, order: optionOrder(getItem(id)) }));
+}
+function optionOrder(it) {
+  if (it.type === 'odd') return it.cells.map((_, i) => i);
+  const idx = it.opts.map((_, i) => i);
+  if (it.opts.every(o => typeof o === 'number')) return idx.sort((a, b) => it.opts[a] - it.opts[b]);
+  return shuffle(idx);
+}
+function startStop(stopIdx) {
+  const boss = stopIdx === 4;
+  S.run = { world: S.prog.world, stop: stopIdx, boss, items: pickItems(boss ? PUZZLES_PER_BOSS : PUZZLES_PER_STOP, boss), idx: 0, res: [], started: Date.now(), cur: null };
+  save();
+}
+function curItem() { const r = S.run; return r && r.items[r.idx] ? getItem(r.items[r.idx].id) : null; }
+
+function hintsFor(it) {
+  switch (it.type) {
+    case 'odd': return ['KIJK: vergelijk de plaatjes. Let op kleur, vorm, grootte en aantal.', 'ZEG: noem bij elk plaatje hardop de kleur en de vorm. Bij welk plaatje klinkt het anders?'];
+    case 'series': return ['KIJK: wat verandert er van het ene plaatje naar het volgende?', 'REGEL: maak er een zin van, zoals "hij draait steeds een kwartslag". Wat komt er dan na het laatste plaatje?'];
+    case 'matrix': return ['KIJK naar de rijen (→). Wat is in een rij hetzelfde, en wat verandert?', 'Kijk nu ook naar de kolommen (↓). Het antwoord moet bij de rij én bij de kolom passen.'];
+    case 'analogy': return ['ZEG: hoe verandert het eerste plaatje in het tweede?', 'REGEL: doe precies hetzelfde met het derde plaatje.'];
+    case 'balance': return ['KIJK: begin bij de weegschaal met de minste dingen. Wat weet je daar zeker?', 'Vervang stap voor stap: zet in de vraag in plaats van een voorwerp wat het weegt.'];
+    case 'grid': return ['Begin bij de aanwijzing die iets zeker zegt. Zet daar een ✓.', 'Zet een ✗ bij alles wat niet kan. Wat blijft er over?'];
+    default: return ['KIJK goed: wat is de verbinding of wat verandert er steeds?', 'ZEG je regel hardop en CHECK of hij bij alles klopt.'];
+  }
+}
+function questionText(it) {
+  if (it.q) return it.q;
+  return { odd: 'Wat hoort er niet bij?', series: 'Wat komt er op het vraagteken?', matrix: 'Wat hoort in het lege vakje?', analogy: 'Wat hoort op het vraagteken?', balance: 'Alle weegschalen zijn in balans.' }[it.type] || '';
+}
+
+/* answer handling: choice = original option index */
+function answer(choice) {
+  const r = S.run, it = curItem(); if (!it || !r.cur || r.cur.done) return;
+  const c = r.cur;
+  c.picks.push(choice);
+  if (choice === it.ans) { finishItem(true); return; }
+  c.tries++;
+  if (c.tries === 2) {
+    const wrong = optionsIdx(it).filter(i => i !== it.ans && !c.picks.includes(i) && !c.removed.includes(i));
+    if (wrong.length > 1) c.removed.push(wrong[Math.floor(Math.random() * wrong.length)]);
+  }
+  const remaining = optionsIdx(it).filter(i => !c.picks.includes(i) && !c.removed.includes(i));
+  if (c.tries >= 3 || remaining.length <= 1) { finishItem(false); return; }
+  save(); renderPlay();
+}
+function optionsIdx(it) { return it.type === 'odd' ? it.cells.map((_, i) => i) : it.opts.map((_, i) => i); }
+function finishItem(solved) {
+  const r = S.run, it = curItem(), c = r.cur, now = Date.now();
+  c.done = true; c.solved = solved;
+  const ms = Math.min(now - c.t0, 5 * 60000);
+  const day = ensureDay(now); day.ms += ms;
+  let coins = solved ? [3, 2, 1][c.tries] || 1 : 0;
+  if (solved && it.bonus) coins += 5;
+  c.coins = coins; S.kid.coins += coins;
+  let xp = 10;
+  if (!day.bonus) { day.bonus = true; xp += 20; c.dayBonus = true; const st = streak(); if (st > 0 && st % 5 === 0) { xp += 50; c.streak = st; } }
+  addXP(xp); c.xp = xp;
+  S.seen[it.id] = { n: (S.seen[it.id] ? S.seen[it.id].n : 0) + 1, at: now };
+  if (!solved || c.tries > 0) { if (!S.retry.includes(it.id)) S.retry.push(it.id); }
+  else S.retry = S.retry.filter(x => x !== it.id);
+  const att = { k: it.id, type: it.type, lvl: it.lvl, at: now, w: r.world, s: r.stop, season: S.prog.season, boss: r.boss, picks: c.picks.slice(), order: r.items[r.idx].order, first: solved && c.tries === 0, hints: Math.min(c.tries, 2), solved, ms, removed: c.removed.slice() };
+  S.attempts.push(att); c.att = S.attempts.length - 1;
+  r.res.push({ first: att.first, solved, hints: att.hints, ai: c.att });
+  if (!day.pause && day.ms > PAUSE_MS) { day.pause = true; setTimeout(() => toast('Je bent al een halfuur bezig. Even pauze? Je mag ook gewoon doorgaan.'), 600); }
+  save(); renderPlay();
+}
+function streak() { let n = 0; for (let i = 0; i < 365; i++) { const k = dayKey(Date.now() - i * 864e5); if (S.days[k] && S.days[k].bonus) n++; else break; } return n; }
+function nextItem() { const r = S.run; r.idx++; r.cur = null; save(); if (r.idx >= r.items.length) finishStop(); else renderPlay(); }
+function finishStop() {
+  const r = S.run, n = r.res.length, first = r.res.filter(x => x.first).length, pct = n ? Math.round(first / n * 100) : 0;
+  let bonus = 0;
+  if (n && r.res.every(x => x.first)) { bonus = 10; S.kid.coins += bonus; }
+  const xp = r.boss ? 150 : 50; addXP(xp);
+  const rec = { w: r.world, s: r.stop, boss: r.boss, at: Date.now(), pct, d: S.prog.d, n, first, fun: null, season: S.prog.season };
+  S.stops.push(rec);
+  // adaptief niveau
+  const p = S.prog; p.recent.push(pct);
+  if (p.recent.length >= 2 && p.recent.slice(-2).every(x => x > 85) && p.d < 20) { S.events.push({ at: Date.now(), type: 'up', from: p.d, to: p.d + 1, pcts: p.recent.slice(-2) }); p.d++; p.recent = []; }
+  else if (pct < 60 && p.d > 1) { S.events.push({ at: Date.now(), type: 'down', from: p.d, to: p.d - 1, pcts: [pct] }); p.d--; p.recent = []; }
+  if (r.boss) {
+    S.bosses.push({ w: r.world, season: p.season, at: Date.now(), atts: r.res.map(x => x.ai), stars: {}, reviewed: false });
+    p.world++; p.stop = 0; if (p.world % WORLDS.length === 0) p.season++;
+  } else p.stop = r.stop + 1;
+  S.lastStop = { rec: S.stops.length - 1, xp, bonus, coins: r.res.reduce((a, x) => a + (S.attempts[x.ai].solved ? 0 : 0), 0) };
+  S.run = null; save();
+  showStopDone(rec, xp, bonus, r);
+}
+
+/* ===================== INACTIVITY ===================== */
+let lastAct = Date.now(), nudged = false, chimed = false;
+function activity() { lastAct = Date.now(); if (nudged) { nudged = false; chimed = false; const o = $('#nudge'); if (o) o.remove(); } }
+['pointerdown', 'keydown', 'pointermove'].forEach(ev => document.addEventListener(ev, () => { if (!$('#nudge')) lastAct = Date.now(); }, { passive: true }));
+setInterval(() => {
+  if (!S.run || !S.run.cur || S.run.cur.done || view !== 'play') return;
+  const idle = Date.now() - lastAct;
+  if (idle > NUDGE_MS && !nudged) { nudged = true; ensureDay().nudges++; save(); showNudge(); }
+  if (idle > SOUND_MS && nudged && !chimed) { chimed = true; chime(); }
+}, 2000);
+function showNudge() {
+  const o = document.createElement('div'); o.className = 'overlay'; o.id = 'nudge';
+  o.innerHTML = `<div class="modal pop"><div class="bigicon">${heroSVG(S.kid.hero, S.kid.eq, 'wave')}</div><h2>Hé ${esc(S.kid.name)}, nog bezig?</h2><p class="muted">Geen probleem als je nadenkt. Druk op de knop en ga verder.</p><button class="cta" type="button" id="nudge-ok">Ik denk na!</button></div>`;
+  document.body.appendChild(o); $('#nudge-ok').onclick = () => activity();
+}
+
+/* ===================== VIEWS ===================== */
+let view = 'start', ptab = 'overzicht';
+function go(v) { view = v; render(); window.scrollTo(0, 0); }
+function render() {
+  document.body.className = view.startsWith('p-') ? 'parent' : '';
+  if (ONLINE && USER) setSync(syncState);
+  const app = $('#app');
+  if (view === 'start') return renderStart(app);
+  if (view === 'kidlogin') return renderKidLogin(app);
+  if (view === 'parentlogin') return renderParentLogin(app);
+  if (view === 'auth') return renderAuth(app);
+  if (view === 'newpw') return renderNewPw(app);
+  if (view === 'builder') return renderBuilder(app);
+  if (view === 'map') return renderMap(app);
+  if (view === 'play') return renderPlay();
+  if (view === 'shop') return renderShop(app);
+  if (view === 'p-main') return renderParent(app);
+}
+function hud(sub, title) {
+  const k = S.kid, ri = rankOf(k.xp), next = RANKS[ri + 1];
+  const lab = next ? `<span><b>${fmt(k.xp)}</b> / ${fmt(next[1])} XP</span><span>nog ${fmt(next[1] - k.xp)} tot ${next[0]}</span>` : `<span><b>${fmt(k.xp)}</b> XP</span><span>Hoogste rang!</span>`;
+  const pct = next ? Math.round((k.xp - RANKS[ri][1]) / (next[1] - RANKS[ri][1]) * 100) : 100;
+  return `<div class="hud"><span class="badge">${headSVG(k.hero, k.eq)}</span>
+    <div class="who"><small>${esc(sub || ('Rang ' + (ri + 1) + ' van 8'))}</small><strong>${esc(title || (RANKS[ri][0] + ' ' + (k.hero.heroName || k.name)))}</strong></div>
+    <div class="xp"><div class="lab">${lab}</div><div class="bar"><i style="width:${pct}%"></i></div></div>
+    <div class="coins"><span class="coin">M</span><span id="coincount">${k.coins}</span></div>
+    <button class="hudbtn" type="button" id="hud-shop">Winkel</button>
+    <button class="hudbtn" type="button" id="hud-map">Kaart</button>
+    <button class="hudbtn" type="button" id="hud-out" title="Uitloggen">Wissel</button></div>`;
+}
+function bindHud() {
+  const s = $('#hud-shop'), m = $('#hud-map'), o = $('#hud-out');
+  if (s) s.onclick = () => go('shop');
+  if (m) m.onclick = () => go('map');
+  if (o) o.onclick = () => { devSet({ remember: false }); go('start'); };
+}
+
+function renderStart(app) {
+  const h = S.kid ? S.kid.hero : { skin: SKINS[2], hair: HAIRS[0], hairStyle: 'stekels', suit: SUITS[0], heroName: 'Held' };
+  app.innerHTML = `<div class="kid"><div class="wrap" style="padding-top:48px;align-items:center;gap:22px">
+    <div class="logo center">Puzzel<span>held</span></div>
+    <p class="muted center">Wie gaat er spelen?</p>
+    <div class="pick">
+      <button class="who-card" type="button" id="pick-kid"><span class="big k">${headSVG(h, S.kid ? S.kid.eq : {})}</span><strong>${esc(S.kid ? S.kid.name : 'Speler')}</strong></button>
+      <button class="who-card" type="button" id="pick-par"><span class="big p"><svg viewBox="0 0 60 60" aria-hidden="true"><rect x="18" y="28" width="24" height="18" rx="3" fill="#38e1ff"/><path d="M23 28 V22 a7 7 0 0 1 14 0 V28" fill="none" stroke="#38e1ff" stroke-width="4"/></svg></span><strong>Ouder</strong></button>
+    </div>
+    <p class="small center muted" style="max-width:52ch">${ONLINE ? 'Versie 1. Je voortgang wordt online bewaard, dus je kunt op elk apparaat verder.' : 'Versie 1, lokale modus. De voortgang wordt alleen in deze browser bewaard.'}</p>
+  </div></div>`;
+  $('#pick-kid').onclick = () => go('kidlogin');
+  $('#pick-par').onclick = () => go('parentlogin');
+}
+function renderKidLogin(app) {
+  const first = !S.kid;
+  app.innerHTML = `<div class="kid"><div class="wrap" style="padding-top:48px;align-items:center;gap:18px">
+    <div class="logo center">Puzzel<span>held</span></div>
+    <form class="form" id="f">
+      ${first ? `<h2 class="center" style="font-family:var(--display);font-weight:400">Welkom! Hoe heet je?</h2>
+        <input type="text" id="kname" value="" placeholder="Je naam" aria-label="Je naam" autocomplete="off">
+        <p class="muted center">Kies een eigen wachtwoord. Onthoud het goed!</p>
+        <input type="password" id="kpw1" placeholder="Wachtwoord" aria-label="Wachtwoord" autocomplete="new-password">
+        <input type="password" id="kpw2" placeholder="Nog een keer" aria-label="Wachtwoord nog een keer" autocomplete="new-password">`
+      : `<h2 class="center" style="font-family:var(--display);font-weight:400">Hoi ${esc(S.kid.name)}!</h2>
+        <input type="password" id="kpw1" placeholder="Jouw wachtwoord" aria-label="Wachtwoord" autocomplete="current-password">`}
+      <label class="chk"><input type="checkbox" id="krem" ${devGet().remember === false ? '' : 'checked'}> Onthoud mij op deze computer</label>
+      <div class="err" id="err"></div>
+      <div style="display:flex;gap:10px"><button class="ghost" type="button" id="back">Terug</button><button class="cta" type="submit">${first ? 'Verder' : 'Start'}</button></div>
+    </form></div></div>`;
+  $('#back').onclick = () => go('start');
+  $('#f').onsubmit = async e => {
+    e.preventDefault(); const p1 = $('#kpw1').value;
+    if (first) {
+      const name = $('#kname').value.trim() || 'Held';
+      if (p1.length < 3) { $('#err').textContent = 'Kies een wachtwoord van minstens 3 tekens.'; return; }
+      if (p1 !== $('#kpw2').value) { $('#err').textContent = 'De twee wachtwoorden zijn niet hetzelfde. Probeer het nog een keer.'; return; }
+      S.kid = { name, pwHash: await hashPw(p1), hero: { skin: SKINS[2], hair: HAIRS[0], hairStyle: 'stekels', suit: SUITS[0], heroName: name }, eq: {}, owned: [], trophies: [], xp: 0, coins: 0, seenTypes: [], built: false, created: Date.now() };
+    } else if ((await hashPw(p1)) !== S.kid.pwHash) { $('#err').textContent = 'Dat wachtwoord klopt niet. Vraag papa of mama als je het vergeten bent.'; return; }
+    devSet({ remember: $('#krem').checked }); save();
+    go(S.kid.built ? 'map' : 'builder');
+  };
+}
+function renderParentLogin(app) {
+  const first = !ONLINE && !S.parentHash;
+  app.innerHTML = `<div class="kid"><div class="wrap" style="padding-top:48px;align-items:center;gap:18px">
+    <div class="logo center">Ouder<span>deel</span></div>
+    <form class="form" id="f">
+      ${ONLINE ? `<p class="muted center">Vul het wachtwoord in van het ouder-account (${esc(USER.email)}).</p>
+        <input type="password" id="ppw1" placeholder="Wachtwoord" aria-label="Wachtwoord" autocomplete="current-password">`
+      : first ? `<p class="muted center">Kies een ouderwachtwoord. ${esc(KN())} kan zonder dit wachtwoord niet in het ouderdeel.</p>
+        <input type="password" id="ppw1" placeholder="Ouderwachtwoord" aria-label="Ouderwachtwoord" autocomplete="new-password">
+        <input type="password" id="ppw2" placeholder="Nog een keer" aria-label="Ouderwachtwoord nog een keer" autocomplete="new-password">`
+      : `<input type="password" id="ppw1" placeholder="Ouderwachtwoord" aria-label="Ouderwachtwoord" autocomplete="current-password">`}
+      <div class="err" id="err"></div>
+      <div style="display:flex;gap:10px"><button class="ghost" type="button" id="back">Terug</button><button class="cta" type="submit" id="pgo">Open</button></div>
+    </form></div></div>`;
+  $('#back').onclick = () => go('start');
+  $('#f').onsubmit = async e => {
+    e.preventDefault(); const p1 = $('#ppw1').value;
+    if (ONLINE) {
+      $('#pgo').disabled = true; $('#err').textContent = '';
+      try {
+        const { error } = await sb.auth.signInWithPassword({ email: USER.email, password: p1 });
+        if (error) { $('#err').textContent = /fetch|network/i.test(error.message) ? 'Geen verbinding met internet. Probeer het zo nog eens.' : 'Dat wachtwoord klopt niet.'; $('#pgo').disabled = false; return; }
+      } catch (err) { $('#err').textContent = 'Geen verbinding met internet. Probeer het zo nog eens.'; $('#pgo').disabled = false; return; }
+    } else if (first) {
+      if (p1.length < 4) { $('#err').textContent = 'Kies minstens 4 tekens.'; return; }
+      if (p1 !== $('#ppw2').value) { $('#err').textContent = 'De wachtwoorden zijn niet hetzelfde.'; return; }
+      S.parentHash = await hashPw(p1); save();
+    } else if ((await hashPw(p1)) !== S.parentHash) { $('#err').textContent = 'Dat wachtwoord klopt niet.'; return; }
+    ptab = 'overzicht'; go('p-main');
+  };
+}
+
+/* Inloggen met het ouder-account (alleen online). Eén keer per apparaat. */
+let authMode = 'login';
+function renderAuth(app) {
+  const su = authMode === 'signup', fg = authMode === 'forgot';
+  app.innerHTML = `<div class="kid"><div class="wrap" style="padding-top:48px;align-items:center;gap:18px">
+    <div class="logo center">Puzzel<span>held</span></div>
+    <p class="auth-note">${su ? 'Maak het ouder-account aan. Gebruik je eigen e-mailadres, niet dat van je kind.' : fg ? 'Vul je e-mailadres in. Je krijgt een mail met een link om een nieuw wachtwoord te kiezen.' : 'Log op dit apparaat in met het ouder-account. Dat hoeft maar één keer per apparaat. Daarna kiest je kind gewoon zijn eigen naam.'}</p>
+    <form class="form" id="f">
+      <input type="email" id="aem" placeholder="E-mailadres" aria-label="E-mailadres" autocomplete="email">
+      ${fg ? '' : `<input type="password" id="apw" placeholder="Wachtwoord${su ? ' (minstens 8 tekens)' : ''}" aria-label="Wachtwoord" autocomplete="${su ? 'new-password' : 'current-password'}">`}
+      ${su ? '<input type="password" id="apw2" placeholder="Wachtwoord nog een keer" aria-label="Wachtwoord nog een keer" autocomplete="new-password">' : ''}
+      <div class="err" id="err" role="status"></div>
+      <button class="cta" type="submit" id="ago">${su ? 'Account maken' : fg ? 'Stuur de link' : 'Inloggen'}</button>
+      <div class="center">${authMode === 'login' ? '<button class="linkbtn" type="button" data-m="signup">Nog geen account? Maak er een</button><br><button class="linkbtn" type="button" data-m="forgot">Wachtwoord vergeten?</button>' : '<button class="linkbtn" type="button" data-m="login">Terug naar inloggen</button>'}</div>
+    </form></div></div>`;
+  app.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { authMode = b.dataset.m; renderAuth(app); });
+  const say = (t, ok) => { const el = $('#err'); el.textContent = t; el.className = ok ? 'err okmsg' : 'err'; };
+  const here = location.origin + location.pathname;
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const email = $('#aem').value.trim(); if (!email) return say('Vul je e-mailadres in.');
+    $('#ago').disabled = true; say('');
+    try {
+      if (fg) {
+        const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: here });
+        if (error) throw error; say('Gelukt. Kijk in je mail (ook bij spam) en klik op de link.', true); return;
+      }
+      const pw = $('#apw').value;
+      if (su) {
+        if (pw.length < 8) { $('#ago').disabled = false; return say('Kies een wachtwoord van minstens 8 tekens.'); }
+        if (pw !== $('#apw2').value) { $('#ago').disabled = false; return say('De wachtwoorden zijn niet hetzelfde.'); }
+        const { data, error } = await sb.auth.signUp({ email, password: pw, options: { emailRedirectTo: here } });
+        if (error) throw error;
+        if (!data.session) { say('Bijna klaar! Kijk in je mail (ook bij spam) en klik op de bevestigingslink. Daarna kun je hier inloggen.', true); authMode = 'login'; return; }
+        USER = data.session.user; return startUser();
+      }
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (error) throw error;
+      USER = data.user; startUser();
+    } catch (err) {
+      const m = String(err && err.message || '');
+      say(/invalid login/i.test(m) ? 'E-mailadres of wachtwoord klopt niet.' : /not confirmed/i.test(m) ? 'Je e-mailadres is nog niet bevestigd. Klik eerst op de link in je mail.' : /registered/i.test(m) ? 'Dit e-mailadres heeft al een account. Log in.' : /fetch|network/i.test(m) ? 'Geen verbinding met internet.' : 'Dat lukte niet: ' + m);
+    } finally { const b = $('#ago'); if (b) b.disabled = false; }
+  };
+}
+function renderNewPw(app) {
+  app.innerHTML = `<div class="kid"><div class="wrap" style="padding-top:48px;align-items:center;gap:18px">
+    <div class="logo center">Nieuw <span>wachtwoord</span></div>
+    <form class="form" id="f">
+      <input type="password" id="npw" placeholder="Nieuw wachtwoord (minstens 8 tekens)" aria-label="Nieuw wachtwoord" autocomplete="new-password">
+      <input type="password" id="npw2" placeholder="Nog een keer" aria-label="Nog een keer" autocomplete="new-password">
+      <div class="err" id="err"></div>
+      <button class="cta" type="submit">Opslaan</button>
+    </form></div></div>`;
+  $('#f').onsubmit = async e => {
+    e.preventDefault(); const pw = $('#npw').value;
+    if (pw.length < 8) { $('#err').textContent = 'Kies minstens 8 tekens.'; return; }
+    if (pw !== $('#npw2').value) { $('#err').textContent = 'De wachtwoorden zijn niet hetzelfde.'; return; }
+    const { error } = await sb.auth.updateUser({ password: pw });
+    if (error) { $('#err').textContent = 'Dat lukte niet: ' + error.message; return; }
+    history.replaceState(null, '', location.pathname);
+    toast('Je nieuwe wachtwoord is opgeslagen.'); startUser();
+  };
+}
+
+function renderBuilder(app) {
+  const h = S.kid.hero;
+  const sw = (arr, key) => arr.map(c => `<button class="sw ${h[key] === c ? 'on' : ''}" type="button" data-k="${key}" data-v="${c}" style="background:${c}" aria-label="kleur"></button>`).join('');
+  app.innerHTML = `<div class="kid"><div class="wrap">
+    <h1 class="logo" style="font-size:clamp(30px,5vw,44px)">Maak je <span>held</span></h1>
+    <div class="builder">
+      <div class="stage" id="hero-stage">${heroSVG(h, S.kid.eq)}</div>
+      <div class="choices">
+        <div class="choice"><h3>Huidskleur</h3><div class="swatches">${sw(SKINS, 'skin')}</div></div>
+        <div class="choice"><h3>Haarkleur</h3><div class="swatches">${sw(HAIRS, 'hair')}</div></div>
+        <div class="choice"><h3>Haarstijl</h3><div class="chips">${STYLES.map(([v, l]) => `<button class="chip ${h.hairStyle === v ? 'on' : ''}" type="button" data-k="hairStyle" data-v="${v}">${l}</button>`).join('')}</div></div>
+        <div class="choice"><h3>Kleur van je pak</h3><div class="swatches">${sw(SUITS, 'suit')}</div></div>
+        <div class="choice"><h3>Heldennaam</h3><div class="form" style="align-items:flex-start;margin:0"><input type="text" id="hname" maxlength="16" value="${esc(h.heroName)}" aria-label="Heldennaam"></div></div>
+        <button class="cta" type="button" id="done" style="align-self:flex-start">${S.kid.built ? 'Opslaan' : 'Klaar, op avontuur!'}</button>
+      </div>
+    </div></div></div>`;
+  app.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { h[b.dataset.k] = b.dataset.v; save(); renderBuilder(app); });
+  $('#hname').oninput = e => { h.heroName = e.target.value; $('#hero-stage').innerHTML = heroSVG(h, S.kid.eq); };
+  $('#done').onclick = () => { h.heroName = ($('#hname').value.trim() || S.kid.name).slice(0, 16); const first = !S.kid.built; S.kid.built = true; save(); go('map'); if (first) toast('Welkom in Heldenstad, ' + esc(h.heroName) + '!'); };
+}
+
+function renderMap(app) {
+  const p = S.prog, w = worldOf(p.world), wi = p.world % WORLDS.length;
+  const nodes = NODES.map(([x, y], i) => {
+    const done = i < p.stop, cur = i === p.stop, boss = i === 4;
+    const label = boss ? 'EINDBAAS' : w.stops[i];
+    const lw = Math.max(90, label.length * 8 + 24);
+    let shapeSvg;
+    if (boss) shapeSvg = `<path d="M${x} ${y - 30} L${x + 32} ${y - 16} L${x + 26} ${y + 24} L${x} ${y + 42} L${x - 26} ${y + 24} L${x - 32} ${y - 16} Z" fill="${cur ? '#ff3355' : '#0b1330'}" stroke="#ffcf3d" stroke-width="4"/><path d="M${x - 12} ${y - 6} L${x + 12} ${y - 6} L${x + 8} ${y + 14} L${x - 8} ${y + 14} Z M${x} ${y + 14} L${x} ${y + 22} M${x - 10} ${y + 24} L${x + 10} ${y + 24}" fill="none" stroke="#ffcf3d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+    else if (done) shapeSvg = `<circle cx="${x}" cy="${y}" r="24" fill="#ffcf3d" stroke="#0b0f20" stroke-width="3"/><text x="${x}" y="${y + 8}" text-anchor="middle" font-size="22" fill="#0b0f20">✓</text>`;
+    else if (cur) shapeSvg = `<circle class="pulse" cx="${x}" cy="${y}" r="34" fill="#ff3355" opacity=".35"/><circle cx="${x}" cy="${y}" r="26" fill="#ff3355" stroke="#fff" stroke-width="3"/><text x="${x}" y="${y + 8}" text-anchor="middle" font-size="22" fill="#fff">${i + 1}</text>`;
+    else shapeSvg = `<circle cx="${x}" cy="${y}" r="24" fill="#22306a" stroke="#38e1ff" stroke-width="3"/><text x="${x}" y="${y + 7}" text-anchor="middle" font-size="20" fill="#38e1ff">${i + 1}</text>`;
+    const ly = boss ? y + 50 : y + 32;
+    return `<g class="node" ${cur ? 'tabindex="0" role="button" data-go="1"' : ''} aria-label="${esc(label)}">${shapeSvg}<rect x="${x - lw / 2}" y="${ly}" width="${lw}" height="20" rx="10" fill="${boss ? '#ffcf3d' : '#0b1330'}" opacity="${boss ? 1 : .88}"/><text x="${x}" y="${ly + 15}" text-anchor="middle" font-size="13" fill="${boss ? '#0b0f20' : '#fff'}">${esc(label)}</text></g>`;
+  }).join('');
+  const [hx, hy] = NODES[Math.min(p.stop, 4)];
+  const path = `M${NODES.map(n => n.join(' ')).join(' L')}`;
+  const svg = `<svg viewBox="0 0 800 400" role="img" aria-label="Wereld ${esc(w.name)}">${scene(w, wi)}
+    <path d="${path}" fill="none" stroke="#38e1ff" stroke-width="6" stroke-dasharray="2 14" stroke-linecap="round"/>
+    <g font-family="Russo One, Arial Black, sans-serif">${nodes}
+    <text x="400" y="56" text-anchor="middle" font-size="14" fill="#38e1ff" letter-spacing="4">${p.season > 1 ? 'SEIZOEN ' + p.season + ' · ' : ''}WERELD ${wi + 1}</text>
+    <text x="400" y="96" text-anchor="middle" font-size="40" fill="#fff" stroke="#0b0f20" stroke-width="2" paint-order="stroke">${esc(w.name.toUpperCase())}</text></g>
+    <g transform="translate(${hx - 34},${hy - 128})"><svg width="68" height="92" viewBox="0 0 200 270">${heroSVG(S.kid.hero, S.kid.eq).replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '')}</svg></g></svg>`;
+  const prev = p.world > 0 ? worldOf(p.world - 1) : null, next = worldOf(p.world + 1);
+  const inbox = S.inbox.length ? `<div class="banner pop"><div>${S.inbox.map(m => esc(m)).join('<br>')}</div><button class="ghost" type="button" id="inbox-ok">Top!</button></div>` : '';
+  const resume = S.run ? `Verder met ${esc(S.run.boss ? 'de eindbaas' : w.stops[S.run.stop])}` : `Start: ${esc(p.stop === 4 ? 'de eindbaas' : w.stops[p.stop])}`;
+  app.innerHTML = `<div class="kid">${hud()}<div class="wrap">${inbox}
+    <div class="map">${svg}</div>
+    <div class="mapfoot"><button class="cta" type="button" id="play">${resume}</button>
+      <div class="wlist">${prev ? `<div class="wchip done"><b>${esc(prev.name)}</b><span>klaar ★</span></div>` : ''}<div class="wchip lock"><b>${esc(next.name)}</b><span>volgende wereld</span></div></div></div>
+    <div><button class="ghost" type="button" id="edit-hero">Held aanpassen</button></div>
+  </div></div>`;
+  bindHud();
+  const start = () => { if (!S.run) startStop(p.stop); go('play'); };
+  $('#play').onclick = start;
+  const n = app.querySelector('[data-go]'); if (n) { n.onclick = start; n.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); start(); } }; }
+  $('#edit-hero').onclick = () => go('builder');
+  const ib = $('#inbox-ok'); if (ib) ib.onclick = () => { S.inbox = []; save(); renderMap(app); };
+  if (pendingRankUp !== null) showRankUp();
+}
+
+/* ---- puzzle rendering (shared by kid play and parent review) ---- */
+function puzzleBody(it, order, mark) {
+  // mark: {gone:[], right:idx|null, picked:[] , interactive:bool}
+  const interactive = mark.interactive;
+  const optBtn = (i, inner, txt) => {
+    const cls = ['opt']; if (txt) cls.push('txt');
+    const gone = mark.gone.includes(i), right = mark.right === i, picked = mark.picked && mark.picked.includes(i);
+    if (gone) cls.push('gone'); if (right) cls.push('right'); if (picked) cls.push('picked');
+    const letter = 'ABCDEFG'[order.indexOf(i)];
+    return `<button class="${cls.join(' ')}" type="button" data-opt="${i}" ${!interactive || gone || mark.locked ? 'disabled' : ''} aria-label="Antwoord ${letter}">${inner}${txt ? '' : `<span class="l">${letter}</span>`}</button>`;
+  };
+  const optsHtml = () => `<div class="opts">${order.map(i => { const o = it.opts[i]; return typeof o === 'object' ? optBtn(i, fig(o)) : optBtn(i, esc(o), true); }).join('')}</div>`;
+  const cell = (f, q) => `<div class="cellbox ${q ? 'q' : ''}">${fig(f)}</div>`;
+  let b = '';
+  switch (it.type) {
+    case 'odd': b = `<div class="opts">${order.map(i => optBtn(i, fig(it.cells[i]))).join('')}</div>`; break;
+    case 'series': b = `<div class="qrow">${it.seq.map(f => cell(f, !f)).join('')}</div>${optsHtml()}`; break;
+    case 'matrix': b = `<div class="matrix" style="grid-template-columns:repeat(${it.grid[0].length},auto)">${it.grid.flat().map(f => cell(f, !f)).join('')}</div>${optsHtml()}`; break;
+    case 'analogy': { const [a, bb, c] = it.abc; b = `<div class="qrow">${cell(a)}<span class="op">hoort bij</span>${cell(bb)}<span class="op">zoals</span>${cell(c)}<span class="op">hoort bij</span>${cell(null, true)}</div>${optsHtml()}`; break; }
+    case 'balance': b = `<div class="bal">${it.facts.map(([l, r]) => `<div class="one">${balance(l, r)}</div>`).join('')}<div class="one ask">${balance(it.ask[0], it.ask[1])}</div></div><div class="bigq">${esc(it.askline)}</div>${optsHtml()}`; break;
+    case 'grid': {
+      const marks = (interactive && S.run && S.run.cur && S.run.cur.grid) || {};
+      b = `<div class="lg"><ol>${it.clues.map(c => `<li>${esc(c)}</li>`).join('')}</ol><table><tr><th></th>${it.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${it.rows.map((r, ri) => `<tr><th>${esc(r)}</th>${it.cols.map((_, ci) => { const v = marks[ri + '-' + ci] || ''; return `<td>${interactive ? `<button type="button" data-cell="${ri}-${ci}" class="${v === '✗' ? 'x' : v === '✓' ? 'v' : ''}" aria-label="${esc(r)}, ${esc(it.cols[ci])}">${v}</button>` : ''}</td>`; }).join('')}</tr>`).join('')}</table></div>${interactive ? '<p class="small" style="color:var(--muted)">Tik op een vakje: één keer is ✗ (kan niet), twee keer is ✓ (zeker).</p>' : ''}<div class="bigq">${esc(it.subq || '')}</div>${optsHtml()}`;
+      break;
+    }
+    default: b = optsHtml();
+  }
+  return b;
+}
+
+function renderPlay() {
+  const app = $('#app'); view = 'play'; document.body.className = '';
+  const r = S.run; if (!r) return go('map');
+  const it = curItem(); if (!it) return finishStop();
+  const w = worldOf(r.world);
+  // nieuw soort puzzel: eerst voorbeeld
+  if (!S.kid.seenTypes.includes(it.type) && EXAMPLES[it.type] && !r.cur) {
+    const ex = fillDeep(EXAMPLES[it.type]), exIt = Object.assign({ opts: [] }, ex.item);
+    app.innerHTML = `<div class="kid">${hud(w.name, r.boss ? 'Eindbaas' : w.stops[r.stop])}<div class="wrap"><div class="newtype pop">
+      <h2 style="font-family:var(--display);font-weight:400">Nieuw soort puzzel: ${esc(TYPE_NAMES[it.type])}!</h2>
+      ${ex.text ? `<p>${esc(ex.text)}</p>` : ''}
+      <div class="board">${exampleBody(exIt)}</div>
+      <div class="bubble sol"><b>Zo werkt het</b><br>${esc(ex.explain)}</div>
+      <div><button class="cta" type="button" id="got">Snap ik, verder!</button> <button class="iconbtn" type="button" id="say" aria-label="Lees voor" style="display:inline-grid;vertical-align:middle"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#38e1ff"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="#38e1ff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button></div>
+    </div></div></div>`;
+    bindHud();
+    $('#got').onclick = () => { S.kid.seenTypes.push(it.type); save(); renderPlay(); };
+    $('#say').onclick = () => speak((ex.text || '') + ' ' + ex.explain);
+    return;
+  }
+  if (!r.cur) { r.cur = { t0: Date.now(), tries: 0, picks: [], removed: [], done: false, grid: {} }; save(); activity(); }
+  const c = r.cur, order = r.items[r.idx].order, hints = hintsFor(it);
+  const stepOn = c.done ? 3 : Math.min(c.tries, 2);
+  const mark = { gone: c.picks.filter(x => x !== it.ans).concat(c.removed), right: c.done ? it.ans : null, interactive: true, locked: c.done };
+  let bubble = '';
+  if (c.done && c.solved) {
+    const msgs = ['Top gedaan!', 'Goed bedacht!', 'Sterk, held!', 'Yes! Dat klopt.'];
+    bubble = `<div class="bubble good pop"><b>${c.tries === 0 ? msgs[r.idx % msgs.length] : 'Goed zo, doorgezet!'}</b><br>+${c.xp} XP${c.coins ? ` · +${c.coins} munten` : ''}${c.dayBonus ? ' · dagbonus!' : ''}${c.streak ? ` · ${c.streak} dagen op rij, +50 XP!` : ''}</div>`;
+  } else if (c.done) {
+    bubble = `<div class="bubble sol pop"><b>Zo zit het</b><br>${esc(it.why)}<br><span class="muted">Deze puzzel komt later nog een keer terug. +${c.xp} XP voor het doorzetten.</span></div>`;
+  } else if (c.tries > 0) {
+    bubble = `<div class="bubble pop"><b>Hint ${c.tries}</b><br>${esc(hints[c.tries - 1])}</div>`;
+  }
+  const total = r.items.length;
+  app.innerHTML = `<div class="kid">${hud(w.name + (r.boss ? ' · eindbaas' : ''), r.boss ? w.boss : w.stops[r.stop])}<div class="wrap">
+    <div class="xp" style="max-width:420px;flex:none;width:100%"><div class="lab"><span>Puzzel <b>${r.idx + 1}</b> van ${total}</span>${it.bonus ? '<span style="color:var(--gold);font-weight:700">★ Bonuspuzzel</span>' : ''}</div><div class="bar"><i style="width:${Math.round(r.idx / total * 100)}%"></i></div></div>
+    <div class="steps" aria-label="Denkstappen">${['KIJK', 'ZEG', 'REGEL', 'CHECK'].map((s, i) => `<span class="${i === stepOn ? 'on' : ''}">${s}</span>`).join('')}</div>
+    <div class="task"><button class="iconbtn" type="button" id="say" aria-label="Lees de opdracht voor"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#38e1ff"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="#38e1ff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button><span>${esc(questionText(it))}</span></div>
+    <div class="board">${puzzleBody(it, order, mark)}</div>
+    ${bubble ? `<div class="hintrow"><span class="badge">${headSVG(S.kid.hero, S.kid.eq)}</span>${bubble}</div>` : ''}
+    ${c.done ? `<div class="nextrow"><button class="cta" type="button" id="next">${r.idx + 1 < total ? 'Volgende puzzel' : 'Klaar!'}</button></div>` : ''}
+    <div><button class="ghost" type="button" id="stopnow">Stoppen voor nu</button></div>
+  </div></div>`;
+  bindHud();
+  app.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { activity(); answer(+b.dataset.opt); });
+  app.querySelectorAll('[data-cell]').forEach(b => b.onclick = () => { const k = b.dataset.cell, v = c.grid[k] || ''; c.grid[k] = v === '' ? '✗' : v === '✗' ? '✓' : ''; save(); renderPlay(); });
+  $('#say').onclick = () => speak(questionText(it) + (it.askline ? '. ' + it.askline : '') + (it.subq ? '. ' + it.subq : '') + (c.tries && !c.done ? '. Hint: ' + hints[c.tries - 1] : ''));
+  const nx = $('#next'); if (nx) { nx.onclick = nextItem; nx.focus(); }
+  $('#stopnow').onclick = () => { toast('Opgeslagen. Je gaat later precies hier verder.'); go('map'); };
+}
+function exampleBody(it) {
+  const order = it.type === 'odd' ? it.cells.map((_, i) => i) : (it.opts || []).map((_, i) => i);
+  const saved = S.run; const cellHtml = puzzleBody(it, order, { gone: [], right: null, interactive: false, locked: true });
+  return cellHtml;
+}
+
+function showStopDone(rec, xp, bonus, run) {
+  const o = document.createElement('div'); o.className = 'overlay';
+  const coins = run.res.reduce((a, x) => a + (S.attempts[x.ai] ? 0 : 0), 0);
+  o.innerHTML = `<div class="modal pop"><div class="bigicon">${heroSVG(S.kid.hero, S.kid.eq)}</div>
+    <h2>${run.boss ? 'Eindbaas verslagen!' : 'Stop gehaald!'}</h2>
+    <div class="summary"><span>+${xp} XP</span>${bonus ? `<span>+${bonus} munten: alles zonder hint!</span>` : ''}<span>${rec.n} puzzels</span></div>
+    ${run.boss ? `<p class="muted">Een nieuwe wereld gaat open! Kijk de eindbaas later samen met papa of mama na. Dan kun je nog uitleg-sterren verdienen.</p>` : ''}
+    <p>Hoe leuk vond je dit? Kies een cijfer.</p>
+    <div class="fun">${Array.from({ length: 10 }, (_, i) => `<button type="button" data-fun="${i + 1}">${i + 1}</button>`).join('')}</div></div>`;
+  document.body.appendChild(o);
+  o.querySelectorAll('[data-fun]').forEach(b => b.onclick = () => { rec.fun = +b.dataset.fun; save(); o.remove(); go('map'); });
+}
+function showRankUp() {
+  const ri = pendingRankUp; pendingRankUp = null;
+  const o = document.createElement('div'); o.className = 'overlay';
+  o.innerHTML = `<div class="modal pop"><div class="bigicon">${heroSVG(S.kid.hero, S.kid.eq)}</div><h2>Promotie!</h2><p>Je bent nu <b style="color:var(--gold)">${RANKS[ri][0]}</b>. Rang ${ri + 1} van 8.</p><button class="cta" type="button" id="rk">Yes!</button></div>`;
+  document.body.appendChild(o); $('#rk').onclick = () => o.remove();
+}
+
+function shopIcon(x) {
+  if (x.slot === 'mask') return `<svg viewBox="0 0 60 44"><path d="M6 16 Q30 6 54 16 L52 30 Q30 24 8 30 Z" fill="${x.color}" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 19 L27 18 L26 25 L18 25 Z M44 19 L33 18 L34 25 L42 25 Z" fill="#fff" stroke="#0b0f20" stroke-width="2"/></svg>`;
+  if (x.slot === 'cape') return `<svg viewBox="0 0 60 44"><path d="M20 4 L40 4 Q46 20 52 40 Q44 36 38 40 Q30 34 22 40 Q16 36 8 40 Q14 20 20 4 Z" fill="${x.color}" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+  if (x.slot === 'shoes') return `<svg viewBox="0 0 60 44"><path d="M8 14 L28 14 L30 24 L52 28 Q56 30 54 36 L8 36 Z" fill="${x.color}" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/><path d="M8 36 L54 36" stroke="#0b0f20" stroke-width="3"/></svg>`;
+  return `<svg viewBox="0 0 60 44">${x.id === 'e-ster' ? shape('ster', 30, 22, 17, x.color, 'vol', 0) : x.id === 'e-bal' ? icon('voetbal', 30, 22, 16) : `<path d="M30 2 L50 14 L30 42 L10 14 Z" fill="#1d3f9a" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/><path d="M33 8 L22 24 L30 24 L26 36 L39 18 L31 18 Z" fill="${x.color}" stroke="#0b0f20" stroke-width="1.5" stroke-linejoin="round"/>`}</svg>`;
+}
+function renderShop(app) {
+  const k = S.kid;
+  const reached = Math.min(S.prog.world, WORLDS.length - 1);
+  const cats = Object.keys(SLOT_NAMES).map(slot => `<div class="cat"><h3>${SLOT_NAMES[slot]}</h3><div class="items">${SHOP.filter(x => x.slot === slot).map(x => {
+    const own = k.owned.includes(x.id), on = k.eq[slot] === x.id;
+    return `<button class="item ${own ? 'owned' : ''} ${on ? 'on' : ''}" type="button" data-item="${x.id}"><span class="ic">${shopIcon(x)}</span><b>${esc(x.name)}</b><span class="price">${own ? (on ? 'Aan ✓' : 'Van jou · aantrekken') : `<span class="coin">M</span>${x.price}`}</span></button>`;
+  }).join('')}</div></div>`).join('');
+  const trophies = `<div class="cat"><h3>Prijzenkast</h3><div class="items">${WORLDS.map((w, i) => {
+    const own = k.trophies.includes(i), open = i <= reached;
+    return `<button class="item special ${own ? 'owned' : ''} ${!open && !own ? 'locked' : ''}" type="button" data-trophy="${i}" ${!open && !own ? 'disabled' : ''}><span class="ic">${w.trophy.icon}</span><b>${esc(w.trophy.name)}</b><span class="price">${own ? 'In je prijzenkast ✓' : open ? `<span class="coin">M</span>${TROPHY_PRICE}` : esc(w.name) + ' · op slot'}</span></button>`;
+  }).join('')}</div></div>`;
+  app.innerHTML = `<div class="kid">${hud('Heldenwinkel', 'Pas en koop')}<div class="wrap"><div class="shop">
+    <div class="stage" id="shop-stage">${heroSVG(k.hero, k.eq)}</div><div style="display:flex;flex-direction:column;gap:14px">${cats}${trophies}</div></div></div></div>`;
+  bindHud();
+  app.querySelectorAll('[data-item]').forEach(b => b.onclick = () => {
+    const x = SHOP.find(s => s.id === b.dataset.item);
+    if (k.owned.includes(x.id)) { k.eq[x.slot] = k.eq[x.slot] === x.id ? undefined : x.id; save(); return renderShop(app); }
+    if (k.coins < x.price) { toast(`Je hebt nog ${x.price - k.coins} munten nodig. Puzzelen levert munten op!`); return; }
+    k.coins -= x.price; k.owned.push(x.id); k.eq[x.slot] = x.id; save(); renderShop(app); toast(`Gekocht: ${esc(x.name)}!`);
+  });
+  app.querySelectorAll('[data-trophy]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.trophy; if (k.trophies.includes(i)) return;
+    if (k.coins < TROPHY_PRICE) { toast(`Spaar nog ${TROPHY_PRICE - k.coins} munten voor de ${esc(WORLDS[i].trophy.name)}.`); return; }
+    k.coins -= TROPHY_PRICE; k.trophies.push(i); save(); renderShop(app); toast(`${WORLDS[i].trophy.icon} ${esc(WORLDS[i].trophy.name)} staat in je prijzenkast!`);
+  });
+}
+
+/* ===================== PARENT ===================== */
+function weekStart() { const d = new Date(); d.setHours(0, 0, 0, 0); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow); return d.getTime(); }
+function renderParent(app) {
+  const openBoss = S.bosses.filter(b => !b.reviewed).length;
+  const fouten = S.attempts.filter(a => !a.first).length;
+  app.innerHTML = `<div class="ptop"><div class="wrap"><b>Ouderdeel${S.kid ? ' · ' + esc(S.kid.name) : ''}</b>
+    <div class="tabs" role="tablist">${[['overzicht', 'Overzicht'], ['fouten', 'Fouten' + (fouten ? ` <span class="cnt">${fouten}</span>` : '')], ['eindbaas', 'Eindbaas nakijken' + (openBoss ? ` <span class="cnt">${openBoss}</span>` : '')], ['printen', 'Printen'], ['account', 'Account']].concat(TEST_MODE ? [['test', 'Testen']] : []).map(([k, l]) => `<button type="button" role="tab" class="${ptab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
+    <button class="pbtn" type="button" id="pout">Uitloggen</button></div></div>
+    <div class="wrap" id="pbody"></div>`;
+  app.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { ptab = b.dataset.tab; renderParent(app); });
+  $('#pout').onclick = () => go('start');
+  const body = $('#pbody');
+  if (!S.kid) { body.innerHTML = `<div class="card"><h2>Nog geen speler</h2><p>Er is nog geen speler. Laat je kind op het startscherm op "Speler" klikken en een eigen wachtwoord kiezen.</p></div>`; if (ptab === 'test') pTest(body); if (ptab === 'account') pAccount(body); return; }
+  ({ overzicht: pOverview, fouten: pErrors, eindbaas: pBoss, printen: pPrint, account: pAccount, test: pTest })[ptab](body);
+}
+function pctFirst(list) { return list.length ? Math.round(list.filter(a => a.first).length / list.length * 100) : null; }
+function pOverview(body) {
+  const ws = weekStart(), week = S.attempts.filter(a => a.at >= ws), stopsW = S.stops.filter(s => s.at >= ws);
+  const msW = Object.entries(S.days).filter(([k]) => new Date(k + 'T12:00').getTime() >= ws).reduce((a, [, v]) => a + v.ms, 0);
+  const nudW = Object.entries(S.days).filter(([k]) => new Date(k + 'T12:00').getTime() >= ws).reduce((a, [, v]) => a + v.nudges, 0);
+  const ev = S.events.slice().sort((a, b) => a.at - b.at).slice(-3).reverse().map(e => `<div class="alert ${e.type === 'up' ? '' : 'warn'}"><b>${e.type === 'up' ? 'Niveau omhoog.' : 'Niveau iets omlaag.'}</b> ${new Date(e.at).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}: ${e.type === 'up' ? `twee stops op rij meer dan 85% meteen goed (${e.pcts.join('% en ')}%)` : `een stop met ${e.pcts[0]}% meteen goed`}. De app geeft nu puzzels van stap ${e.to} van 20, die meestal passen bij ${groupLabel(e.to)} (schatting).</div>`).join('');
+  const openBoss = S.bosses.filter(b => !b.reviewed);
+  // last 7 days chart
+  const days = Array.from({ length: 7 }, (_, i) => { const t = Date.now() - (6 - i) * 864e5, k = dayKey(t); return { k, label: new Date(t).toLocaleDateString('nl-NL', { weekday: 'short' }).slice(0, 2), m: Math.round(((S.days[k] || {}).ms || 0) / 60000) }; });
+  const maxM = Math.max(30, ...days.map(d => d.m)), sc = 120 / maxM, ticks = [0, Math.round(maxM / 2), maxM];
+  const chart = `<svg viewBox="0 0 330 170" role="img" aria-label="Minuten per dag, laatste 7 dagen">
+    ${ticks.map(t => `<line x1="34" x2="324" y1="${140 - t * sc}" y2="${140 - t * sc}" stroke="${t ? '#e3e8f2' : '#5b6078'}"/><text x="28" y="${143 - t * sc}" text-anchor="end" font-size="10" fill="#5b6078">${t}</text>`).join('')}
+    ${days.map((d, i) => `<rect x="${44 + i * 40}" y="${140 - d.m * sc}" width="26" height="${d.m * sc}" fill="#2f5bd0" rx="3"/>${d.m ? `<text x="${57 + i * 40}" y="${134 - d.m * sc}" text-anchor="middle" font-size="10" fill="#17172b">${d.m}</text>` : ''}<text x="${57 + i * 40}" y="157" text-anchor="middle" font-size="11" fill="#5b6078">${d.label}</text>`).join('')}</svg>`;
+  // per type
+  const now = Date.now(), cut = now - 14 * 864e5, cut2 = now - 28 * 864e5;
+  const rows = Object.keys(TYPE_NAMES).map(t => {
+    const cur = S.attempts.filter(a => a.type === t && a.at >= cut), prev = S.attempts.filter(a => a.type === t && a.at >= cut2 && a.at < cut);
+    if (!cur.length && !prev.length) return '';
+    const p = pctFirst(cur), q = pctFirst(prev);
+    const trend = p === null ? '<span class="pill">geen data</span>' : q === null ? '<span class="pill">nieuw</span>' : p - q >= 8 ? '<span class="pill up">beter</span>' : q - p >= 8 ? '<span class="pill down">lastiger</span>' : '<span class="pill">gelijk</span>';
+    return `<tr><td>${TYPE_NAMES[t]}</td><td>${p === null ? '–' : `<span class="meter"><i class="${p < 60 ? 'low' : ''}" style="width:${p}%"></i></span>${p}%`}</td><td>${cur.length}</td><td>${trend}</td></tr>`;
+  }).join('');
+  const funs = S.stops.filter(s => s.fun).slice(-5).map(s => s.fun);
+  body.innerHTML = `
+    ${openBoss.length ? `<div class="alert info"><b>${openBoss.length} eindbaas${openBoss.length > 1 ? 'en' : ''} wacht${openBoss.length > 1 ? 'en' : ''} op samen nakijken.</b> ${esc(KN())} kan gewoon verder spelen. <button class="pbtn" type="button" id="toboss">Bekijk</button></div>` : ''}
+    ${ev}
+    <div class="stats">
+      <div class="stat"><span class="v">${minutes(msW)}</span><span class="l">gewerkt deze week</span></div>
+      <div class="stat"><span class="v">${stopsW.length}</span><span class="l">stops afgerond deze week</span></div>
+      <div class="stat"><span class="v">${pctFirst(week) === null ? '–' : pctFirst(week) + '%'}</span><span class="l">meteen goed deze week</span></div>
+      <div class="stat"><span class="v">${nudW}×</span><span class="l">teruggehaald na afdwalen</span></div>
+    </div>
+    <div class="two">
+      <div class="card chart"><h2>Minuten per dag</h2>${chart}</div>
+      <div class="card"><h2>Per soort puzzel (laatste 2 weken)</h2>${rows ? `<div class="tbl"><table class="data"><thead><tr><th>Soort</th><th>Meteen goed</th><th>Aantal</th><th>Trend</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="small">Nog geen puzzels gemaakt.</p>'}</div>
+    </div>
+    <div class="two">
+      <div class="card"><h2>Waar staat hij</h2>
+        <p>Wereld <b>${(S.prog.world % WORLDS.length) + 1}: ${esc(worldOf(S.prog.world).name)}</b>${S.prog.season > 1 ? ` (seizoen ${S.prog.season})` : ''}, stop ${S.prog.stop + 1} van 5.</p>
+        <p>Moeilijkheid: stap <b>${S.prog.d}</b> van 20. Puzzels op deze stap passen meestal bij <b>${groupLabel(S.prog.d)}</b>.</p>
+        <p class="small">Dit is een schatting op basis van de soort puzzels, geen meting. ${esc(KN())} ziet deze informatie niet.</p>
+        <p>Rang: <b>${RANKS[rankOf(S.kid.xp)][0]}</b> · ${fmt(S.kid.xp)} XP · ${S.kid.coins} munten</p></div>
+      <div class="card"><h2>Plezier</h2>${funs.length ? `<p>Laatste cijfers die ${esc(KN())} gaf: <b>${funs.join(' · ')}</b> (gemiddeld ${(funs.reduce((a, b) => a + b, 0) / funs.length).toFixed(1)})</p>` : '<p class="small">Na elke stop geeft ' + esc(KN()) + ' een cijfer van 1 tot 10. Die verschijnen hier.</p>'}
+        <p class="small">Een paar lage cijfers achter elkaar? Dan is het misschien te moeilijk of te lang. Praat er even met hem over.</p></div>
+    </div>`;
+  const tb = $('#toboss'); if (tb) tb.onclick = () => { ptab = 'eindbaas'; renderParent($('#app')); };
+}
+function reviewCard(a, extra = '') {
+  const it = getItem(a.k); if (!it) return '';
+  const wrong = a.picks.filter(p => p !== it.ans);
+  const mark = { gone: [], right: it.ans, picked: wrong, interactive: false, locked: true };
+  const w = worldOf(a.w);
+  const res = a.first ? 'meteen goed' : a.solved ? `goed na ${a.hints} hint${a.hints > 1 ? 's' : ''}` : 'uitleg bekeken na 2 hints';
+  const pickLetters = a.picks.map(p => 'ABCDEFG'[a.order.indexOf(p)]).join(', daarna ');
+  return `<div class="qcard"><div class="meta"><b>${esc(w.name)} · ${a.boss ? 'eindbaas' : esc(w.stops[a.s])} · ${TYPE_NAMES[it.type]}</b><span>${new Date(a.at).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })} · ${res} · ${Math.round(a.ms / 1000)} sec</span></div>
+    <div><b>${esc(questionText(it))}</b>${it.askline ? ' ' + esc(it.askline) : ''}${it.subq ? ' ' + esc(it.subq) : ''}</div>
+    <div class="board">${puzzleBody(it, a.order, mark)}</div>
+    <div class="legend"><span><i style="background:#e0a000"></i>gekozen door ${esc(KN())} (${pickLetters})</span><span><i style="background:#3ddc97"></i>goede antwoord</span></div>
+    <div class="why"><b>Uitleg:</b> ${esc(it.why)}</div>${extra}</div>`;
+}
+let errFilter = '';
+function pErrors(body) {
+  const list = S.attempts.map((a, i) => Object.assign({ i }, a)).filter(a => !a.first && (!errFilter || a.type === errFilter)).sort((a, b) => b.at - a.at);
+  const byType = {}; S.attempts.filter(a => !a.first && a.at > Date.now() - 7 * 864e5).forEach(a => byType[a.type] = (byType[a.type] || 0) + 1);
+  const top = Object.entries(byType).sort((a, b) => b[1] - a[1])[0];
+  const totalW = Object.values(byType).reduce((a, b) => a + b, 0);
+  body.innerHTML = `${top && top[1] >= 3 ? `<div class="alert warn"><b>${TYPE_NAMES[top[0]]} gaan nog lastig.</b> ${top[1]} van de ${totalW} fouten deze week waren van deze soort.</div>` : ''}
+    <div class="pform"><label for="ef">Soort puzzel</label><select id="ef"><option value="">Alle soorten</option>${Object.entries(TYPE_NAMES).map(([k, v]) => `<option value="${k}" ${errFilter === k ? 'selected' : ''}>${v}</option>`).join('')}</select><span class="small">${list.length} puzzels niet meteen goed</span></div>
+    ${list.length ? list.slice(0, 40).map(a => reviewCard(a)).join('') : '<div class="card"><p>Nog geen fouten. Alles wat ' + esc(KN()) + ' niet meteen goed heeft, verschijnt hier met de hele vraag.</p></div>'}`;
+  $('#ef').onchange = e => { errFilter = e.target.value; pErrors(body); };
+}
+let openBossIdx = null;
+function pBoss(body) {
+  if (!S.bosses.length) { body.innerHTML = `<div class="card"><h2>Eindbaas nakijken</h2><p>Nog geen eindbaas gespeeld. Na elke wereld speelt ${esc(KN())} een eindbaas. De app kijkt die meteen na, zodat hij verder kan. Jullie kijken hem later samen na. Dan geef je uitleg-sterren: +25 XP en +5 munten per ster.</p></div>`; return; }
+  const list = S.bosses.map((b, i) => `<div class="bossrow ${!b.reviewed ? 'open' : ''}"><span><b>${esc(worldOf(b.w).name)} · eindbaas</b> · gespeeld ${new Date(b.at).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })} · ${b.atts.filter(ai => S.attempts[ai] && S.attempts[ai].first).length} van ${b.atts.length} meteen goed</span><span>${b.reviewed ? `<span class="pill up">nagekeken · ${Object.values(b.stars).filter(Boolean).length} sterren</span>` : `<button class="pbtn dark" type="button" data-open="${i}">Samen nakijken</button>`}</span></div>`).reverse().join('');
+  let detail = '';
+  if (openBossIdx !== null && S.bosses[openBossIdx] && !S.bosses[openBossIdx].reviewed) {
+    const b = S.bosses[openBossIdx]; const n = Object.values(b.stars).filter(Boolean).length;
+    detail = `<div class="card"><h2>${esc(worldOf(b.w).name)} · eindbaas samen nakijken</h2>
+      <p>Ga naast ${esc(KN())} zitten. Laat hem bij elke puzzel hardop uitleggen hoe hij het aanpakte. Geef een ster voor een goede uitleg, ook als het antwoord niet klopte.</p>
+      ${b.atts.map(ai => { const a = S.attempts[ai]; if (!a) return ''; const on = !!b.stars[ai]; return reviewCard(a, `<div><button class="starbtn ${on ? 'on' : ''}" type="button" data-star="${ai}">${on ? '★ uitleg-ster' : '☆ geef uitleg-ster'}</button></div>`); }).join('')}
+      <button class="pbtn dark" type="button" id="bossdone">Nakijken klaar · ${esc(KN())} krijgt ${n} uitleg-ster${n === 1 ? '' : 'ren'}</button></div>`;
+  }
+  body.innerHTML = `<div class="card"><h2>Eindbazen</h2><p class="small">${esc(KN())} hoeft nooit op het nakijken te wachten. De sterren en munten komen erbij zodra jullie klaar zijn, en hij krijgt een melding.</p>${list}</div>${detail}`;
+  body.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { openBossIdx = +b.dataset.open; pBoss(body); const d = body.querySelector('.card:last-child'); if (d) d.scrollIntoView({ behavior: 'smooth' }); });
+  body.querySelectorAll('[data-star]').forEach(btn => btn.onclick = () => { const b = S.bosses[openBossIdx]; const k = btn.dataset.star; b.stars[k] = !b.stars[k]; save(); pBoss(body); });
+  const bd = $('#bossdone'); if (bd) bd.onclick = () => {
+    const b = S.bosses[openBossIdx], n = Object.values(b.stars).filter(Boolean).length;
+    b.reviewed = true; b.reviewedAt = Date.now();
+    if (n) { addXP(25 * n); S.kid.coins += 5 * n; S.inbox.push(`Je hebt ${n} uitleg-ster${n === 1 ? '' : 'ren'} gekregen voor de eindbaas van ${worldOf(b.w).name}! +${25 * n} XP en +${5 * n} munten.`); }
+    else S.inbox.push(`De eindbaas van ${worldOf(b.w).name} is samen nagekeken. Goed gewerkt!`);
+    openBossIdx = null; save(); renderParent($('#app'));
+  };
+}
+/* Printen: nieuwe oefenpuzzels of eerder gespeelde puzzels, met antwoordblad */
+const PR = { src: 'nieuw', n: 16, d: null, types: null, worlds: null, wrong: true, days: 14 };
+function pPrint(body) {
+  if (PR.d === null) PR.d = S.prog.d;
+  if (!PR.types) PR.types = Object.keys(TYPE_NAMES);
+  const played = [...new Set(S.attempts.map(a => a.w))].sort((a, b) => a - b);
+  if (!PR.worlds) PR.worlds = played.slice();
+  const wName = w => esc(worldOf(w).name) + (w >= WORLDS.length ? ` (seizoen ${Math.floor(w / WORLDS.length) + 1})` : '');
+  body.innerHTML = `<div class="card"><h2>Printen</h2>
+    <p>Maak een werkblad met een antwoordblad erachter. In het printvenster kies je je printer, of "Opslaan als PDF".</p>
+    <div class="pform"><label><input type="radio" name="prsrc" value="nieuw" ${PR.src === 'nieuw' ? 'checked' : ''}> Nieuwe oefenpuzzels</label>
+      <label><input type="radio" name="prsrc" value="oud" ${PR.src === 'oud' ? 'checked' : ''} ${played.length ? '' : 'disabled'}> Puzzels die ${esc(KN())} al gespeeld heeft</label></div>
+    ${PR.src === 'nieuw' ? `
+      <div class="pform"><label for="prn">Aantal</label><select id="prn">${[8, 16, 24].map(n => `<option ${PR.n === n ? 'selected' : ''}>${n}</option>`).join('')}</select>
+        <label for="prd">Moeilijkheid</label><select id="prd">${Array.from({ length: 20 }, (_, i) => i + 1).map(d => `<option value="${d}" ${PR.d === d ? 'selected' : ''}>stap ${d} (${groupLabel(d)})${d === S.prog.d ? ' · nu in de app' : ''}</option>`).join('')}</select></div>
+      <div class="pform"><span>Soorten</span><div class="checks">${Object.entries(TYPE_NAMES).map(([k, v]) => `<label><input type="checkbox" data-type="${k}" ${PR.types.includes(k) ? 'checked' : ''}> ${v}</label>`).join('')}</div></div>`
+    : `
+      <div class="pform"><span>Werelden</span><div class="checks">${played.map(w => `<label><input type="checkbox" data-world="${w}" ${PR.worlds.includes(w) ? 'checked' : ''}> ${wName(w)}</label>`).join('')}</div></div>
+      <div class="pform"><label for="prdays">Periode</label><select id="prdays">${[[7, 'afgelopen week'], [14, 'afgelopen 2 weken'], [28, 'afgelopen 4 weken'], [0, 'alles']].map(([v, l]) => `<option value="${v}" ${PR.days === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <label><input type="checkbox" id="prwrong" ${PR.wrong ? 'checked' : ''}> alleen puzzels die niet meteen goed gingen</label></div>`}
+    <div class="pform"><button class="pbtn dark" type="button" id="prgo">Maak werkblad</button><span class="small" id="prinfo"></span></div></div>`;
+  body.querySelectorAll('[name=prsrc]').forEach(r => r.onchange = () => { PR.src = r.value; pPrint(body); });
+  const on = (sel, f) => { const el = $(sel, body); if (el) el.onchange = f; };
+  on('#prn', e => { PR.n = +e.target.value; });
+  on('#prd', e => { PR.d = +e.target.value; });
+  on('#prdays', e => { PR.days = +e.target.value; });
+  on('#prwrong', e => { PR.wrong = e.target.checked; });
+  body.querySelectorAll('[data-type]').forEach(c => c.onchange = () => { PR.types = [...body.querySelectorAll('[data-type]:checked')].map(x => x.dataset.type); });
+  body.querySelectorAll('[data-world]').forEach(c => c.onchange = () => { PR.worlds = [...body.querySelectorAll('[data-world]:checked')].map(x => +x.dataset.world); });
+  $('#prgo').onclick = () => {
+    let list = [], title, sub;
+    if (PR.src === 'nieuw') {
+      if (!PR.types.length) { $('#prinfo').textContent = 'Kies minstens één soort puzzel.'; return; }
+      const types = shuffle(PR.types);
+      for (let i = 0; list.length < PR.n && i < PR.n * 3; i++) {
+        const t = types[i % types.length];
+        const it = GEN.make(t, PR.d, Math.floor(Math.random() * 1e9));
+        if (it) list.push({ it, order: optionOrder(it) });
+      }
+      title = 'Oefenblad'; sub = `${list.length} puzzels`;
+    } else {
+      const from = PR.days ? Date.now() - PR.days * 864e5 : 0, ids = new Set();
+      S.attempts.slice().sort((a, b) => b.at - a.at).forEach(a => {
+        if (a.at < from || !PR.worlds.includes(a.w) || (PR.wrong && a.first) || ids.has(a.k)) return;
+        const it = getItem(a.k); if (!it) return;
+        ids.add(a.k); list.push({ it, order: a.order });
+      });
+      list = list.slice(0, 30);
+      title = PR.wrong ? 'Nog een keer proberen' : 'Herhaalblad'; sub = `${list.length} puzzels`;
+    }
+    if (!list.length) { $('#prinfo').textContent = 'Er zijn geen puzzels die hierbij passen. Kies een langere periode of meer werelden.'; return; }
+    $('#prinfo').textContent = '';
+    openPrint(list, title, sub);
+  };
+}
+function answerOf(it, order) {
+  const isFig = it.type === 'odd' || typeof it.opts[it.ans] === 'object';
+  return isFig ? 'ABCDEFG'[order.indexOf(it.ans)] : String(it.opts[it.ans]);
+}
+function openPrint(list, title, sub) {
+  const box = $('#printout'), name = S.kid ? esc(S.kid.name) : '';
+  const qs = list.map((x, i) => `<div class="pq"><h3>${i + 1}. ${esc(questionText(x.it))}</h3>
+    <div class="board">${puzzleBody(x.it, x.order, { gone: [], right: null, picked: [], interactive: false, locked: true })}</div>
+    <div class="ansline">Mijn antwoord: ____________</div></div>`).join('');
+  const ans = list.map(x => `<li><b>${esc(answerOf(x.it, x.order))}</b>. ${esc(x.it.why || '')}</li>`).join('');
+  box.innerHTML = `<div class="pbar"><b>${esc(title)}</b><span class="small">${esc(sub)}</span><span style="flex:1"></span>
+      <button class="pbtn dark" type="button" id="pr-print">Printen of opslaan als PDF</button><button class="pbtn" type="button" id="pr-close">Sluiten</button></div>
+    <div class="sheet"><h1>Puzzelheld · ${esc(title)}</h1>
+      <div class="meta"><span>Naam: ${name || '________________'}</span><span>Datum: ________________</span></div>
+      <p class="tip">Neem je tijd. KIJK goed, ZEG hardop wat je ziet, bedenk de REGEL en CHECK je antwoord.</p>
+      ${qs}
+      <div class="answers"><h1>Antwoorden</h1><p class="tip">Voor papa of mama. Kijk samen na en laat ${esc(KN())} uitleggen hoe hij het deed.</p><ol>${ans}</ol></div>
+    </div>`;
+  box.hidden = false; box.scrollTop = 0;
+  $('#pr-print').onclick = () => window.print();
+  $('#pr-close').onclick = () => { box.hidden = true; box.innerHTML = ''; };
+}
+
+/* Account: online status, wachtwoord van het kind, uitloggen, opnieuw beginnen */
+let confirmOut = false, confirmReset = false;
+function pAccount(body) {
+  const st = { ok: 'opgeslagen', wait: 'bezig met opslaan', off: 'geen internet, wordt later opgeslagen' }[syncState];
+  body.innerHTML = `
+    <div class="card"><h2>Account</h2>
+      ${ONLINE ? `<p>Ingelogd als <b>${esc(USER.email)}</b>. De voortgang wordt online bewaard en is op elk apparaat met dit account hetzelfde.</p>
+        <p class="small">Laatst bewaard: ${S.savedAt ? new Date(S.savedAt).toLocaleString('nl-NL') : 'nog niets'} · ${st}</p>
+        <div class="pform"><button class="pbtn" type="button" id="syncnow">Nu opslaan</button></div>`
+      : '<p>Lokale modus: de voortgang staat alleen in deze browser op dit apparaat.</p>'}
+    </div>
+    ${S.kid ? `<div class="card"><h2>Namen in de puzzels</h2>
+      <p class="small">Sommige puzzels gaan over je kind en zijn broertje. Pas ze hier aan als je wilt.</p>
+      <div class="pform"><label for="nkid">Naam kind</label><input type="text" id="nkid" maxlength="20" value="${esc(S.kid.name)}">
+        <label for="nbro">Naam broertje</label><input type="text" id="nbro" maxlength="20" value="${esc((S.names || {}).brother || '')}" placeholder="Marcus">
+        <label for="nnick">Bijnaam broertje</label><input type="text" id="nnick" maxlength="20" value="${esc((S.names || {}).nick || '')}" placeholder="Macage"></div>
+      <div class="pform"><button class="pbtn dark" type="button" id="nset">Namen opslaan</button><span class="small" id="nmsg"></span></div></div>` : ''}
+    ${S.kid ? `<div class="card"><h2>Wachtwoord van ${esc(S.kid.name)}</h2>
+      <p class="small">Is ${esc(S.kid.name)} zijn wachtwoord vergeten? Kies hier samen een nieuw. Het wachtwoord wordt niet leesbaar bewaard, dus ook jij kunt het oude niet terugzien.</p>
+      <div class="pform"><input type="password" id="kn1" placeholder="Nieuw wachtwoord" aria-label="Nieuw wachtwoord" autocomplete="new-password"><input type="password" id="kn2" placeholder="Nog een keer" aria-label="Nog een keer" autocomplete="new-password"><button class="pbtn dark" type="button" id="kset">Opslaan</button><span class="small" id="kmsg"></span></div></div>` : ''}
+    ${ONLINE ? `<div class="card"><h2>Dit apparaat</h2>
+      <p>Uitloggen betekent: op dit apparaat moet daarna eerst weer iemand met het ouder-account inloggen voordat ${esc(KN())} verder kan. De voortgang blijft online bewaard.</p>
+      ${confirmOut ? '<div class="confirm"><b>Uitloggen op dit apparaat?</b> <button class="pbtn danger" type="button" id="out2">Ja, uitloggen</button><button class="pbtn" type="button" id="out0">Nee</button></div>' : '<div class="pform"><button class="pbtn" type="button" id="out1">Uitloggen op dit apparaat</button></div>'}</div>` : ''}
+    <div class="card"><h2>Opnieuw beginnen</h2>
+      <p>Wist de held, de voortgang en alle resultaten${ONLINE ? ', op alle apparaten' : ''}. Handig als je eerst zelf hebt getest voordat ${esc(KN())} echt begint.</p>
+      ${confirmReset ? '<div class="confirm"><b>Echt alles wissen?</b> Dit kan niet ongedaan worden gemaakt. <button class="pbtn danger" type="button" id="rs2">Ja, wis alles</button><button class="pbtn" type="button" id="rs0">Nee</button></div>' : '<div class="pform"><button class="pbtn danger" type="button" id="rs1">Alles wissen</button></div>'}</div>`;
+  const b = id => document.getElementById(id);
+  if (b('syncnow')) b('syncnow').onclick = async () => { await push(); pAccount(body); toast(syncState === 'ok' ? 'Opgeslagen.' : 'Geen internet. Het wordt later opgeslagen.'); };
+  if (b('nset')) b('nset').onclick = () => {
+    const k = b('nkid').value.trim(); if (k) S.kid.name = k.slice(0, 20);
+    S.names = { brother: b('nbro').value.trim().slice(0, 20), nick: b('nnick').value.trim().slice(0, 20) };
+    save(); b('nmsg').textContent = 'Opgeslagen.';
+  };
+  if (b('kset')) b('kset').onclick = async () => {
+    const p1 = b('kn1').value;
+    if (p1.length < 3) { b('kmsg').textContent = 'Minstens 3 tekens.'; return; }
+    if (p1 !== b('kn2').value) { b('kmsg').textContent = 'De twee wachtwoorden zijn niet hetzelfde.'; return; }
+    S.kid.pwHash = await hashPw(p1); save(); b('kn1').value = b('kn2').value = ''; b('kmsg').textContent = 'Opgeslagen.';
+  };
+  if (b('out1')) b('out1').onclick = () => { confirmOut = true; pAccount(body); };
+  if (b('out0')) b('out0').onclick = () => { confirmOut = false; pAccount(body); };
+  if (b('out2')) b('out2').onclick = async () => { confirmOut = false; if (pushT) await push(); devSet({ remember: false }); await sb.auth.signOut(); };
+  if (b('rs1')) b('rs1').onclick = () => { confirmReset = true; pAccount(body); };
+  if (b('rs0')) b('rs0').onclick = () => { confirmReset = false; pAccount(body); };
+  if (b('rs2')) b('rs2').onclick = () => { confirmReset = false; S = fresh(); save(); devSet({ remember: false }); go('start'); };
+}
+let confirmWipe = false;
+function pTest(body) {
+  body.innerHTML = `<div class="card"><h2>Testen</h2>
+    <p>Met deze knoppen kun je de app uitproberen zonder dat ${esc(KN())} eerst weken hoeft te spelen.</p>
+    <div class="pform"><button class="pbtn dark" type="button" id="sim">Simuleer 5 dagen spelen</button><span class="small">Maakt nep-resultaten aan (stops, fouten, een eindbaas), verspreid over de afgelopen 5 dagen.</span></div>
+    <div class="pform"><button class="pbtn" type="button" id="coins">Geef ${esc(KN())} 300 munten</button><span class="small">Om de winkel te testen.</span></div>
+    ${confirmWipe ? `<div class="confirm"><b>Echt alles wissen?</b> Account, held, voortgang en wachtwoorden worden verwijderd. <button class="pbtn danger" type="button" id="wipe2">Ja, wis alles</button><button class="pbtn" type="button" id="wipe0">Nee</button></div>` : `<div class="pform"><button class="pbtn danger" type="button" id="wipe">Alles wissen en opnieuw beginnen</button></div>`}
+    <p class="small">Doe je dit voordat ${esc(KN())} echt begint? Wis dan alles eerst, zodat zijn eigen resultaten schoon zijn.</p></div>`;
+  $('#sim').onclick = async () => { if (!S.kid) await simKid(); simulate(5); toast('5 dagen gesimuleerd.'); renderParent($('#app')); };
+  $('#coins').onclick = () => { if (!S.kid) { toast('Maak eerst een account voor je kind.'); return; } S.kid.coins += 300; save(); toast('300 munten gegeven.'); };
+  const w = $('#wipe'); if (w) w.onclick = () => { confirmWipe = true; pTest(body); };
+  const w0 = $('#wipe0'); if (w0) w0.onclick = () => { confirmWipe = false; pTest(body); };
+  const w2 = $('#wipe2'); if (w2) w2.onclick = () => { confirmWipe = false; S = fresh(); save(); go('start'); };
+}
+async function simKid() {
+  S.kid = { name: 'Testkind', pwHash: await hashPw('test'), hero: { skin: SKINS[2], hair: HAIRS[0], hairStyle: 'stekels', suit: SUITS[0], heroName: 'Testkind' }, eq: {}, owned: [], trophies: [], xp: 0, coins: 0, seenTypes: Object.keys(TYPE_NAMES), built: true, created: Date.now() };
+}
+function simulate(nDays) {
+  if (!S.kid) S.kid = { name: 'Testkind', pwHash: null, hero: { skin: SKINS[2], hair: HAIRS[0], hairStyle: 'stekels', suit: SUITS[0], heroName: 'Testkind' }, eq: {}, owned: [], trophies: [], xp: 0, coins: 0, seenTypes: Object.keys(TYPE_NAMES), built: true, created: Date.now() };
+  const skill = { odd: .9, series: .8, matrix: .7, analogy: .8, text: .85, balance: .5, grid: .65 };
+  for (let d = nDays; d >= 1; d--) {
+    const base = Date.now() - d * 864e5 + 15 * 3600e3 - (Date.now() % 864e5);
+    let t = base;
+    const stopsToday = S.prog.stop === 4 ? 1 : 1 + (d % 2);
+    for (let s = 0; s < stopsToday; s++) {
+      startStop(S.prog.stop);
+      const r = S.run;
+      for (r.idx = 0; r.idx < r.items.length; r.idx++) {
+        const it = getItem(r.items[r.idx].id);
+        const p = skill[it.type] - (it.lvl - S.prog.d) * .05;
+        const opts = optionsIdx(it), wrongs = shuffle(opts.filter(i => i !== it.ans));
+        const picks = []; let tries = 0;
+        while (Math.random() > p && tries < 3 && wrongs.length) { picks.push(wrongs.shift()); tries++; }
+        const solved = tries < 3; if (solved) picks.push(it.ans);
+        const ms = 25000 + Math.random() * 70000; t += ms + 5000;
+        const day = ensureDay(t); day.ms += ms; if (Math.random() < .12) day.nudges++; day.bonus = true;
+        S.kid.coins += solved ? [3, 2, 1][tries] || 0 : 0; S.kid.xp += 10;
+        S.seen[it.id] = { n: (S.seen[it.id] ? S.seen[it.id].n : 0) + 1, at: t };
+        S.attempts.push({ k: it.id, type: it.type, lvl: it.lvl, at: t, w: r.world, s: r.stop, season: S.prog.season, boss: r.boss, picks, order: r.items[r.idx].order, first: solved && tries === 0, hints: Math.min(tries, 2), solved, ms, removed: [] });
+        r.res.push({ first: solved && tries === 0, solved, hints: Math.min(tries, 2), ai: S.attempts.length - 1 });
+      }
+      r.idx = r.items.length;
+      const n = r.res.length, pct = Math.round(r.res.filter(x => x.first).length / n * 100);
+      S.kid.xp += r.boss ? 150 : 50;
+      S.stops.push({ w: r.world, s: r.stop, boss: r.boss, at: t, pct, d: S.prog.d, n, first: r.res.filter(x => x.first).length, fun: 6 + Math.floor(Math.random() * 4), season: S.prog.season });
+      const pg = S.prog; pg.recent.push(pct);
+      if (pg.recent.length >= 2 && pg.recent.slice(-2).every(x => x > 85) && pg.d < 20) { S.events.push({ at: t, type: 'up', from: pg.d, to: pg.d + 1, pcts: pg.recent.slice(-2) }); pg.d++; pg.recent = []; }
+      else if (pct < 60 && pg.d > 1) { S.events.push({ at: t, type: 'down', from: pg.d, to: pg.d - 1, pcts: [pct] }); pg.d--; pg.recent = []; }
+      if (r.boss) { S.bosses.push({ w: r.world, season: pg.season, at: t, atts: r.res.map(x => x.ai), stars: {}, reviewed: false }); pg.world++; pg.stop = 0; }
+      else pg.stop = r.stop + 1;
+      S.run = null;
+    }
+  }
+  save();
+}
+
+/* ===================== BOOT ===================== */
+function startView() {
+  view = S.kid && devGet().remember ? (S.kid.built ? 'map' : 'builder') : 'start';
+  render();
+}
+async function startUser() {
+  KEY = 'puzzelheld-v1-' + USER.id; load();
+  $('#app').innerHTML = '<p style="padding:40px;text-align:center;color:#b8c3e6">Laden…</p>';
+  await pull(); startView();
+}
+async function boot() {
+  if (!ONLINE) { load(); return startView(); }
+  sb.auth.onAuthStateChange((ev, session) => {
+    // geen await in deze callback (advies van Supabase); werk daarom via setTimeout
+    if (ev === 'PASSWORD_RECOVERY') setTimeout(() => { USER = session.user; go('newpw'); }, 0);
+    else if (ev === 'SIGNED_OUT') setTimeout(() => { USER = null; authMode = 'login'; const el = $('#sync'); if (el) el.hidden = true; go('auth'); }, 0);
+  });
+  let session = null;
+  try { const { data } = await sb.auth.getSession(); session = data.session; } catch (e) { session = null; }
+  if (view === 'newpw') return;
+  if (!session) { view = 'auth'; return render(); }
+  USER = session.user; await startUser();
+}
+boot();
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden) { if (pushT) push(); return; }
+  lastAct = Date.now();
+  if (ONLINE && USER && view !== 'play' && view !== 'newpw' && view !== 'auth') { if (await pull()) { if (!S.kid && view !== 'p-main') view = 'start'; render(); } }
+});
+</script>
