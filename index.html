@@ -466,10 +466,13 @@ const GEN = (() => {
       why = `Plaatje ${'ABCDE'[pos]} is anders: ${mode === 'n' ? 'het heeft een ander aantal' : mode === 's' ? 'het is groter' : 'het is leeg'}.`;
     } else if (d >= 16 && R.r() < .5) {
       // vorm en kleur horen bij elkaar; één plaatje breekt die koppeling
+      // de breker zit altijd in de grootste groep, anders zijn er twee goede antwoorden
+      const pos = R.pick([0, 2, 4]);
       const [v1, v2] = R.shuf(VORMEN).slice(0, 2), [c1, c2] = R.shuf(KLEUREN).slice(0, 2);
       cells = Array.from({ length: n }, (_, i) => i % 2 ? F(v2, c2, { n: R.int(1, 3) }) : F(v1, c1, { n: R.int(1, 3) }));
-      cells[pos] = pos % 2 ? F(v2, c1, { n: cells[pos].n || 1 }) : F(v1, c2, { n: cells[pos].n || 1 });
+      cells[pos] = F(v1, c2, { n: cells[pos].n || 1 });
       why = `Alle ${VORM_MV[v1]} zijn ${c1} en alle ${VORM_MV[v2]} zijn ${c2}. Plaatje ${'ABCDE'[pos]} breekt die regel. Het aantal doet er niet toe.`;
+      return { type: 'odd', cells, ans: pos, why };
     } else {
       // de anderen verschillen in kleur (afleiding), de regel zit in het aantal of de vorm
       const cs = R.shuf(KLEUREN), mode = R.pick(['n', 'k']);
