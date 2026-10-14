@@ -264,7 +264,33 @@ body.parent #sync.off { background: #fff4dc; color: #8a5800; }
 #printout .pq .opt { border: 1.5px solid #9aa3bd; }
 #printout .pq .lg td { min-width: 34px; height: 30px; border: 1px solid #9aa3bd; }
 #printout .ansline { margin-top: 8px; font-size: 15px; }
-#printout .answers { break-before: page; page-break-before: always; }
+#printout .answers { break-before: auto; }
+#printout .pg { break-after: page; page-break-after: always; }
+#printout .pg + .pg { margin-top: 28px; padding-top: 20px; border-top: 2px dashed #d5dcec; }
+#printout .pgrid { columns: 2; column-gap: 8px; }
+#printout .pgrid .pq { display: inline-block; width: 100%; margin: 0 0 8px; padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.3; }
+#printout .pgrid .pq h3 { font-size: 12.5px; margin-bottom: 4px; }
+#printout .pgrid .board { gap: 6px; padding: 2px 0 0; }
+#printout .pgrid .qrow { gap: 4px; }
+#printout .pgrid .cellbox svg, #printout .pgrid .opt svg { width: 34px; height: 34px; }
+#printout .pgrid .matrix { gap: 3px; }
+#printout .pgrid .matrix .cellbox svg { width: 34px; height: 34px; }
+#printout .pgrid .cellbox { border-radius: 6px; box-shadow: 0 0 0 1px #c9d1e6; }
+#printout .pgrid .op { font-size: 10px; }
+#printout .pgrid .opts { gap: 6px; }
+#printout .pgrid .opt { padding: 3px 5px; border-radius: 7px; box-shadow: none; border: 1px solid #9aa3bd; }
+#printout .pgrid .opt.txt { font-size: 12.5px; padding: 3px 9px; min-width: 0; }
+#printout .pgrid .opt .l { font-size: 10px; }
+#printout .pgrid .bal { gap: 4px; }
+#printout .pgrid .bal svg { width: 118px; }
+#printout .pgrid .bigq { font-size: 12.5px; }
+#printout .pgrid .lg { gap: 8px; }
+#printout .pgrid .lg ol { font-size: 11.5px; padding-left: 16px; gap: 1px; max-width: none; }
+#printout .pgrid .lg th, #printout .pgrid .lg td { font-size: 11px; padding: 2px 5px; border-width: 1px; }
+#printout .pgrid .lg td { min-width: 30px; height: 22px; }
+#printout .pgrid .ansline { margin-top: 4px; font-size: 12px; }
+#printout .answers ol { columns: 2; column-gap: 24px; font-size: 12px; }
+#printout .answers h2 { font-size: 15px; margin: 10px 0 4px; }
 #printout .answers li { margin-bottom: 6px; }
 #printout .tip { font-size: 14px; color: #5b6078; margin-bottom: 12px; }
 @media print {
@@ -272,6 +298,7 @@ body.parent #sync.off { background: #fff4dc; color: #8a5800; }
   #printout { position: static; overflow: visible; background: #fff; }
   #printout .pbar { display: none; }
   #printout .sheet { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+  #printout .pg + .pg { margin-top: 0; padding-top: 0; border-top: 0; }
   @page { margin: 14mm; }
 }
 </style>
@@ -442,6 +469,7 @@ const fmt = n => n.toLocaleString('nl-NL');
 const dayKey = (t = Date.now()) => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function rankOf(xp) { let i = 0; RANKS.forEach((r, k) => { if (xp >= r[1]) i = k; }); return i; }
+function weekLabel(d) { return 'niveau week ' + Math.ceil(d / 5) + ' van het lesprogramma'; }
 function groupLabel(d) { return d <= 5 ? 'groep 3–4' : d <= 10 ? 'groep 4–5' : d <= 15 ? 'groep 5–6' : 'groep 6–7'; }
 function worldOf(i) { return WORLDS[i % WORLDS.length]; }
 function minutes(ms) { const m = Math.round(ms / 60000); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' u ' + (m % 60) + ' m'; }
@@ -1157,7 +1185,7 @@ function pOverview(body) {
     <div class="two">
       <div class="card"><h2>Waar staat hij</h2>
         <p>Wereld <b>${(S.prog.world % WORLDS.length) + 1}: ${esc(worldOf(S.prog.world).name)}</b>${S.prog.season > 1 ? ` (seizoen ${S.prog.season})` : ''}, stop ${S.prog.stop + 1} van 5.</p>
-        <p>Moeilijkheid: stap <b>${S.prog.d}</b> van 20. Puzzels op deze stap passen meestal bij <b>${groupLabel(S.prog.d)}</b>.</p>
+        <p>Moeilijkheid: stap <b>${S.prog.d}</b> van 20, dat is het ${weekLabel(S.prog.d)}. De app begon op stap 11, het begin van week 3. Puzzels op deze stap passen meestal bij <b>${groupLabel(S.prog.d)}</b>.</p>
         <p class="small">Dit is een schatting op basis van de soort puzzels, geen meting. ${esc(KN())} ziet deze informatie niet.</p>
         <p>Rang: <b>${RANKS[rankOf(S.kid.xp)][0]}</b> · ${fmt(S.kid.xp)} XP · ${S.kid.coins} munten</p></div>
       <div class="card"><h2>Plezier</h2>${funs.length ? `<p>Laatste cijfers die ${esc(KN())} gaf: <b>${funs.join(' · ')}</b> (gemiddeld ${(funs.reduce((a, b) => a + b, 0) / funs.length).toFixed(1)})</p>` : '<p class="small">Na elke stop geeft ' + esc(KN()) + ' een cijfer van 1 tot 10. Die verschijnen hier.</p>'}
@@ -1225,8 +1253,8 @@ function pPrint(body) {
     <div class="pform"><label><input type="radio" name="prsrc" value="nieuw" ${PR.src === 'nieuw' ? 'checked' : ''}> Nieuwe oefenpuzzels</label>
       <label><input type="radio" name="prsrc" value="oud" ${PR.src === 'oud' ? 'checked' : ''} ${played.length ? '' : 'disabled'}> Puzzels die ${esc(KN())} al gespeeld heeft</label></div>
     ${PR.src === 'nieuw' ? `
-      <div class="pform"><label for="prn">Aantal</label><select id="prn">${[8, 16, 24].map(n => `<option ${PR.n === n ? 'selected' : ''}>${n}</option>`).join('')}</select>
-        <label for="prd">Moeilijkheid</label><select id="prd">${Array.from({ length: 20 }, (_, i) => i + 1).map(d => `<option value="${d}" ${PR.d === d ? 'selected' : ''}>stap ${d} (${groupLabel(d)})${d === S.prog.d ? ' · nu in de app' : ''}</option>`).join('')}</select></div>
+      <div class="pform"><label for="prn">Aantal</label><select id="prn">${[[8, '1 blad (8 puzzels)'], [16, '2 bladen (16 puzzels)'], [24, '3 bladen (24 puzzels)'], [40, '5 bladen (40 puzzels)']].map(([n, l]) => `<option value="${n}" ${PR.n === n ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <label for="prd">Moeilijkheid</label><select id="prd">${Array.from({ length: 20 }, (_, i) => i + 1).map(d => `<option value="${d}" ${PR.d === d ? 'selected' : ''}>stap ${d} · ${weekLabel(d)}${d === S.prog.d ? ' · nu in de app' : ''}</option>`).join('')}</select></div>
       <div class="pform"><span>Soorten</span><div class="checks">${Object.entries(TYPE_NAMES).map(([k, v]) => `<label><input type="checkbox" data-type="${k}" ${PR.types.includes(k) ? 'checked' : ''}> ${v}</label>`).join('')}</div></div>`
     : `
       <div class="pform"><span>Werelden</span><div class="checks">${played.map(w => `<label><input type="checkbox" data-world="${w}" ${PR.worlds.includes(w) ? 'checked' : ''}> ${wName(w)}</label>`).join('')}</div></div>
@@ -1259,7 +1287,7 @@ function pPrint(body) {
         const it = getItem(a.k); if (!it) return;
         ids.add(a.k); list.push({ it, order: a.order });
       });
-      list = list.slice(0, 30);
+      list = list.slice(0, 32);
       title = PR.wrong ? 'Nog een keer proberen' : 'Herhaalblad'; sub = `${list.length} puzzels`;
     }
     if (!list.length) { $('#prinfo').textContent = 'Er zijn geen puzzels die hierbij passen. Kies een langere periode of meer werelden.'; return; }
@@ -1271,19 +1299,27 @@ function answerOf(it, order) {
   const isFig = it.type === 'odd' || typeof it.opts[it.ans] === 'object';
   return isFig ? 'ABCDEFG'[order.indexOf(it.ans)] : String(it.opts[it.ans]);
 }
+/* Werkblad: per 8 puzzels één A4 (twee kolommen), zoals de werkbladen van het lesprogramma. Antwoorden achteraan. */
 function openPrint(list, title, sub) {
-  const box = $('#printout'), name = S.kid ? esc(S.kid.name) : '';
-  const qs = list.map((x, i) => `<div class="pq"><h3>${i + 1}. ${esc(questionText(x.it))}</h3>
+  const box = $('#printout'), name = S && S.kid ? esc(S.kid.name) : '';
+  const pages = []; for (let i = 0; i < list.length; i += PUZZLES_PER_STOP) pages.push(list.slice(i, i + PUZZLES_PER_STOP));
+  const multi = pages.length > 1;
+  const head = (n) => `<h1>Puzzelheld · ${esc(title)}${multi ? ` · blad ${n}` : ''}</h1>
+      <div class="meta"><span>Naam: ${name || '________________'}</span><span>Datum: ________________</span></div>`;
+  const pq = (x, i) => `<div class="pq"><h3>${i + 1}. ${esc(questionText(x.it))}</h3>
     <div class="board">${puzzleBody(x.it, x.order, { gone: [], right: null, picked: [], interactive: false, locked: true })}</div>
-    <div class="ansline">Mijn antwoord: ____________</div></div>`).join('');
-  const ans = list.map(x => `<li><b>${esc(answerOf(x.it, x.order))}</b>. ${esc(x.it.why || '')}</li>`).join('');
+    <div class="ansline">Antwoord: ________</div></div>`;
+  const sheets = pages.map((pg, n) => {
+    const idx = pg.map((x, k) => ({ x, k: n * PUZZLES_PER_STOP + k }));
+    const ordered = idx;
+    return { ordered, html: `<section class="pg">${head(n + 1)}${n === 0 ? '<p class="tip">Neem je tijd. KIJK goed, ZEG hardop wat je ziet, bedenk de REGEL en CHECK je antwoord.</p>' : ''}
+      <div class="pgrid">${ordered.map((o, m) => pq(o.x, n * PUZZLES_PER_STOP + m)).join('')}</div></section>` };
+  });
+  const ans = sheets.map((sh, n) => `${multi ? `<h2>Blad ${n + 1}</h2>` : ''}<ol start="${n * PUZZLES_PER_STOP + 1}">${sh.ordered.map(o => `<li><b>${esc(answerOf(o.x.it, o.x.order))}</b>. ${esc(o.x.it.why || '')}</li>`).join('')}</ol>`).join('');
   box.innerHTML = `<div class="pbar"><b>${esc(title)}</b><span class="small">${esc(sub)}</span><span style="flex:1"></span>
       <button class="pbtn dark" type="button" id="pr-print">Printen of opslaan als PDF</button><button class="pbtn" type="button" id="pr-close">Sluiten</button></div>
-    <div class="sheet"><h1>Puzzelheld · ${esc(title)}</h1>
-      <div class="meta"><span>Naam: ${name || '________________'}</span><span>Datum: ________________</span></div>
-      <p class="tip">Neem je tijd. KIJK goed, ZEG hardop wat je ziet, bedenk de REGEL en CHECK je antwoord.</p>
-      ${qs}
-      <div class="answers"><h1>Antwoorden</h1><p class="tip">Voor papa of mama. Kijk samen na en laat ${esc(KN())} uitleggen hoe hij het deed.</p><ol>${ans}</ol></div>
+    <div class="sheet">${sheets.map(sh => sh.html).join('')}
+      <div class="answers"><h1>Antwoorden</h1><p class="tip">Voor papa of mama. Kijk samen na en laat ${name || 'je kind'} uitleggen hoe hij het deed.</p>${ans}</div>
     </div>`;
   box.hidden = false; box.scrollTop = 0;
   $('#pr-print').onclick = () => window.print();
