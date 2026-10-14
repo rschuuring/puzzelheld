@@ -27,12 +27,16 @@ const GEN = (() => {
   /* ---- getallenreeksen ---- */
   function getallen(R, d) {
     let t, ans, why;
-    const kind = d <= 6 ? R.pick(['plus', 'min']) : d <= 12 ? R.pick(['plus', 'min', 'keer', 'groei']) : R.pick(['twee', 'groei', 'wissel', 'keer']);
+    const kind = d <= 6 ? R.pick(['plus', 'min']) : d <= 12 ? R.pick(['plus', 'min', 'keer', 'groei']) : d <= 15 ? R.pick(['twee', 'groei', 'wissel', 'keer']) : R.pick(['twee', 'wissel', 'keerplus', 'som', 'kwadraat', 'groei2']);
     if (kind === 'plus') { const a = R.int(1, 12), k = R.int(2, d <= 3 ? 3 : 9); t = [0, 1, 2, 3, 4].map(i => a + i * k); ans = a + 5 * k; why = `${ans}: er komt steeds ${k} bij.`; }
     else if (kind === 'min') { const k = R.int(2, d <= 3 ? 3 : 8), a = 5 * k + R.int(5, 30); t = [0, 1, 2, 3, 4].map(i => a - i * k); ans = a - 5 * k; why = `${ans}: er gaat steeds ${k} af.`; }
     else if (kind === 'keer') { const a = R.int(1, 4), m = d < 15 ? 2 : R.pick([2, 3]); t = [0, 1, 2, 3].map(i => a * m ** i); ans = a * m ** 4; why = `${ans}: elk getal is ${m === 2 ? 'het dubbele van' : 'drie keer'} het vorige.`; }
     else if (kind === 'groei') { const a = R.int(1, 10), s = R.int(1, 2); t = [a]; for (let i = 0; i < 4; i++) t.push(t[i] + s + i); ans = t[4] + s + 4; why = `${ans}: de stap wordt steeds één groter (+${s}, +${s + 1}, +${s + 2}...).`; }
     else if (kind === 'wissel') { const a = R.int(1, 10), p = R.int(2, 5), q = R.int(1, 4); t = [a]; for (let i = 0; i < 5; i++) t.push(t[i] + (i % 2 ? -q : p)); ans = t[5] - q; why = `${ans}: het gaat om en om +${p} en −${q}.`; }
+    else if (kind === 'keerplus') { const a = R.int(1, 4), p = R.int(1, 3); t = [a]; for (let i = 0; i < 4; i++) t.push(t[i] * 2 + p); ans = t[4] * 2 + p; why = `${ans}: steeds keer 2 en dan +${p}.`; }
+    else if (kind === 'som') { const a = R.int(1, 4), b = R.int(a, a + 4); t = [a, b]; for (let i = 0; i < 4; i++) t.push(t[i] + t[i + 1]); ans = t[4] + t[5]; why = `${ans}: elk getal is de twee getallen ervoor bij elkaar opgeteld (${t[4]} + ${t[5]}).`; }
+    else if (kind === 'kwadraat') { const a = R.int(1, 4); t = [0, 1, 2, 3, 4].map(i => (a + i) * (a + i)); ans = (a + 5) * (a + 5); why = `${ans}: het zijn ${a}×${a}, ${a + 1}×${a + 1}, ${a + 2}×${a + 2}... dus nu ${a + 5}×${a + 5}.`; }
+    else if (kind === 'groei2') { const a = R.int(1, 9), s = R.int(1, 3); t = [a]; for (let i = 0; i < 4; i++) t.push(t[i] + s + 2 * i); ans = t[4] + s + 8; why = `${ans}: de stap wordt steeds 2 groter (+${s}, +${s + 2}, +${s + 4}...).`; }
     else { const a = R.int(1, 5), b = R.int(10, 30), k = R.int(1, 3), m = R.int(2, 5) * (R.r() < .5 ? 1 : -1); t = []; for (let i = 0; i < 6; i++) t.push(i % 2 ? b + m * ((i - 1) / 2) : a + k * (i / 2)); ans = a + k * 3; why = `${ans}: er lopen twee reeksen door elkaar. Op deze plek komt de reeks ${a}, ${a + k}, ${a + 2 * k}...`; }
     const cand = R.shuf([ans + 1, ans - 1, ans + 2, ans - 2, t[t.length - 1], ans + 10]).filter(x => x >= 0 && x !== ans);
     const o = opties(ans, cand); if (!o) return null;
@@ -54,6 +58,13 @@ const GEN = (() => {
       const cand = tel ? [F(vs[0], cs[2], { n: 2 }), F(vs[0], cs[1], { n: 3 }), F(vs[1], cs[2], { n: 3 }), F(vs[0], cs[0], { n: 3 })] : [F(vs[1], cs[2]), F(vs[2], cs[1]), F(vs[0], cs[2]), F(vs[2], cs[0])];
       const o = opties(ans, R.shuf(cand));
       return o && { type: 'matrix', grid, opts: o, ans: 0, why: tel ? `Drie ${kleurWoord(cs[2])} ${VORM_MV[vs[0]]}: elke rij heeft één kleur en in elke kolom komt er één bij.` : `${cap(een(cs[2], vs[2]))}: elke rij heeft één kleur, elke kolom één vorm.` };
+    }
+    if (d >= 17 && R.r() < .5) {
+      // drie regels: vorm per rij, kleur per kolom, aantal (r+c)%3+1
+      const cell = (r, c) => F(vs[r], cs[c], { n: (r + c) % 3 + 1 });
+      const grid = [0, 1, 2].map(r => [0, 1, 2].map(c => cell(r, c))); const ans = grid[2][2]; grid[2][2] = null;
+      const o = opties(ans, R.shuf([F(vs[2], cs[2], { n: 1 }), F(vs[2], cs[2], { n: 3 }), F(vs[2], cs[1], { n: 2 }), F(vs[1], cs[2], { n: 2 }), F(vs[2], cs[0], { n: 2 })]));
+      return o && { type: 'matrix', grid, opts: o, ans: 0, why: `Twee ${kleurWoord(cs[2])} ${VORM_MV[vs[2]]}: elke rij heeft één vorm, elke kolom één kleur, en het aantal (1, 2, 3) komt in elke rij en kolom één keer voor.` };
     }
     // latijns vierkant: vorm (r+c), kleur (r+2c) mod 3
     const grid = [0, 1, 2].map(r => [0, 1, 2].map(c => F(vs[(r + c) % 3], cs[(r + 2 * c) % 3]))); const ans = grid[2][2]; grid[2][2] = null;
@@ -115,6 +126,12 @@ const GEN = (() => {
       const ander = mode === 'n' ? kl(basis, { n: 3 }) : mode === 's' ? kl(basis, { s: 'l' }) : kl(basis, { f: 'leeg' });
       cells = Array.from({ length: n }, (_, i) => i === pos ? ander : basis);
       why = `Plaatje ${'ABCDE'[pos]} is anders: ${mode === 'n' ? 'het heeft een ander aantal' : mode === 's' ? 'het is groter' : 'het is leeg'}.`;
+    } else if (d >= 16 && R.r() < .5) {
+      // vorm en kleur horen bij elkaar; één plaatje breekt die koppeling
+      const [v1, v2] = R.shuf(VORMEN).slice(0, 2), [c1, c2] = R.shuf(KLEUREN).slice(0, 2);
+      cells = Array.from({ length: n }, (_, i) => i % 2 ? F(v2, c2, { n: R.int(1, 3) }) : F(v1, c1, { n: R.int(1, 3) }));
+      cells[pos] = pos % 2 ? F(v2, c1, { n: cells[pos].n || 1 }) : F(v1, c2, { n: cells[pos].n || 1 });
+      why = `Alle ${VORM_MV[v1]} zijn ${c1} en alle ${VORM_MV[v2]} zijn ${c2}. Plaatje ${'ABCDE'[pos]} breekt die regel. Het aantal doet er niet toe.`;
     } else {
       // de anderen verschillen in kleur (afleiding), de regel zit in het aantal of de vorm
       const cs = R.shuf(KLEUREN), mode = R.pick(['n', 'k']);
@@ -159,6 +176,14 @@ const GEN = (() => {
     if (d <= 14) {
       const a = R.int(2, 3), b = R.int(2, 3);
       return { type: 'balance', facts: [[[[X, 1]], [[Y, a]]], [[[Y, 1]], [[Z, b]]]], ask: [[[X, 1]], '?'], askline: `Hoeveel ${MV[Z]}?`, opts: opties(a * b, R.shuf([a + b, a * b - 1, a * b + 1, b, a * b + b]).filter(v => v > 0 && v !== a * b)), ans: 0, why: `${a * b}: 1 ${X} = ${a} ${MV[Y]}, en elke ${Y} = ${b} ${MV[Z]}. Dus ${a} × ${b} = ${a * b}.` };
+    }
+    if (d >= 17 && R.r() < .6) {
+      if (R.r() < .5) {
+        const a = R.int(2, 3), b = R.int(2, 3), m = 2;
+        return { type: 'balance', facts: [[[[X, 1]], [[Y, a]]], [[[Y, 1]], [[Z, b]]]], ask: [[[X, m]], '?'], askline: `Hoeveel ${MV[Z]}?`, opts: opties(m * a * b, R.shuf([a * b, m * a + b, m * a * b - 2, m * a * b + 2, a * b + m]).filter(v => v > 0 && v !== m * a * b)), ans: 0, why: `${m * a * b}: 1 ${X} = ${a} ${MV[Y]} = ${a} × ${b} = ${a * b} ${MV[Z]}. Twee keer zoveel is ${m * a * b}.` };
+      }
+      const k = R.int(2, 3), n = 2 * k;
+      return { type: 'balance', facts: [[[[X, 2]], [[Y, 1]]], [[[Y, 1]], [[Z, n]]]], ask: [[[X, 1]], '?'], askline: `Hoeveel ${MV[Z]}?`, opts: opties(k, R.shuf([n, 2 * n, k + 1, k - 1, n - 1]).filter(v => v > 0 && v !== k)), ans: 0, why: `${k}: 2 ${MV[X]} wegen samen evenveel als ${n} ${MV[Z]}. Eén ${X} is dus de helft: ${k}.` };
     }
     const a = R.int(2, 4), y = R.int(1, 4), n = a + y;
     if (n > 6) return null;

@@ -174,6 +174,9 @@ p { margin: 0; }
 .item.on { border-color: var(--mint); box-shadow: 0 0 14px rgba(61,220,151,.3); }
 .item.special { border-color: rgba(255,207,61,.7); }
 .item.locked { opacity: .45; cursor: default; }
+.item.trying { border-color: var(--gold); box-shadow: 0 0 14px rgba(255,207,61,.35); }
+.tryon { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; background: rgba(255,207,61,.08); border: 1px solid rgba(255,207,61,.5); }
+.tryon .row { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ---------- parent ---------- */
 .ptop { background: var(--panel); border-bottom: 1px solid var(--line); }
@@ -338,12 +341,16 @@ const GEN = (() => {
   /* ---- getallenreeksen ---- */
   function getallen(R, d) {
     let t, ans, why;
-    const kind = d <= 6 ? R.pick(['plus', 'min']) : d <= 12 ? R.pick(['plus', 'min', 'keer', 'groei']) : R.pick(['twee', 'groei', 'wissel', 'keer']);
+    const kind = d <= 6 ? R.pick(['plus', 'min']) : d <= 12 ? R.pick(['plus', 'min', 'keer', 'groei']) : d <= 15 ? R.pick(['twee', 'groei', 'wissel', 'keer']) : R.pick(['twee', 'wissel', 'keerplus', 'som', 'kwadraat', 'groei2']);
     if (kind === 'plus') { const a = R.int(1, 12), k = R.int(2, d <= 3 ? 3 : 9); t = [0, 1, 2, 3, 4].map(i => a + i * k); ans = a + 5 * k; why = `${ans}: er komt steeds ${k} bij.`; }
     else if (kind === 'min') { const k = R.int(2, d <= 3 ? 3 : 8), a = 5 * k + R.int(5, 30); t = [0, 1, 2, 3, 4].map(i => a - i * k); ans = a - 5 * k; why = `${ans}: er gaat steeds ${k} af.`; }
     else if (kind === 'keer') { const a = R.int(1, 4), m = d < 15 ? 2 : R.pick([2, 3]); t = [0, 1, 2, 3].map(i => a * m ** i); ans = a * m ** 4; why = `${ans}: elk getal is ${m === 2 ? 'het dubbele van' : 'drie keer'} het vorige.`; }
     else if (kind === 'groei') { const a = R.int(1, 10), s = R.int(1, 2); t = [a]; for (let i = 0; i < 4; i++) t.push(t[i] + s + i); ans = t[4] + s + 4; why = `${ans}: de stap wordt steeds één groter (+${s}, +${s + 1}, +${s + 2}...).`; }
     else if (kind === 'wissel') { const a = R.int(1, 10), p = R.int(2, 5), q = R.int(1, 4); t = [a]; for (let i = 0; i < 5; i++) t.push(t[i] + (i % 2 ? -q : p)); ans = t[5] - q; why = `${ans}: het gaat om en om +${p} en −${q}.`; }
+    else if (kind === 'keerplus') { const a = R.int(1, 4), p = R.int(1, 3); t = [a]; for (let i = 0; i < 4; i++) t.push(t[i] * 2 + p); ans = t[4] * 2 + p; why = `${ans}: steeds keer 2 en dan +${p}.`; }
+    else if (kind === 'som') { const a = R.int(1, 4), b = R.int(a, a + 4); t = [a, b]; for (let i = 0; i < 4; i++) t.push(t[i] + t[i + 1]); ans = t[4] + t[5]; why = `${ans}: elk getal is de twee getallen ervoor bij elkaar opgeteld (${t[4]} + ${t[5]}).`; }
+    else if (kind === 'kwadraat') { const a = R.int(1, 4); t = [0, 1, 2, 3, 4].map(i => (a + i) * (a + i)); ans = (a + 5) * (a + 5); why = `${ans}: het zijn ${a}×${a}, ${a + 1}×${a + 1}, ${a + 2}×${a + 2}... dus nu ${a + 5}×${a + 5}.`; }
+    else if (kind === 'groei2') { const a = R.int(1, 9), s = R.int(1, 3); t = [a]; for (let i = 0; i < 4; i++) t.push(t[i] + s + 2 * i); ans = t[4] + s + 8; why = `${ans}: de stap wordt steeds 2 groter (+${s}, +${s + 2}, +${s + 4}...).`; }
     else { const a = R.int(1, 5), b = R.int(10, 30), k = R.int(1, 3), m = R.int(2, 5) * (R.r() < .5 ? 1 : -1); t = []; for (let i = 0; i < 6; i++) t.push(i % 2 ? b + m * ((i - 1) / 2) : a + k * (i / 2)); ans = a + k * 3; why = `${ans}: er lopen twee reeksen door elkaar. Op deze plek komt de reeks ${a}, ${a + k}, ${a + 2 * k}...`; }
     const cand = R.shuf([ans + 1, ans - 1, ans + 2, ans - 2, t[t.length - 1], ans + 10]).filter(x => x >= 0 && x !== ans);
     const o = opties(ans, cand); if (!o) return null;
@@ -365,6 +372,13 @@ const GEN = (() => {
       const cand = tel ? [F(vs[0], cs[2], { n: 2 }), F(vs[0], cs[1], { n: 3 }), F(vs[1], cs[2], { n: 3 }), F(vs[0], cs[0], { n: 3 })] : [F(vs[1], cs[2]), F(vs[2], cs[1]), F(vs[0], cs[2]), F(vs[2], cs[0])];
       const o = opties(ans, R.shuf(cand));
       return o && { type: 'matrix', grid, opts: o, ans: 0, why: tel ? `Drie ${kleurWoord(cs[2])} ${VORM_MV[vs[0]]}: elke rij heeft één kleur en in elke kolom komt er één bij.` : `${cap(een(cs[2], vs[2]))}: elke rij heeft één kleur, elke kolom één vorm.` };
+    }
+    if (d >= 17 && R.r() < .5) {
+      // drie regels: vorm per rij, kleur per kolom, aantal (r+c)%3+1
+      const cell = (r, c) => F(vs[r], cs[c], { n: (r + c) % 3 + 1 });
+      const grid = [0, 1, 2].map(r => [0, 1, 2].map(c => cell(r, c))); const ans = grid[2][2]; grid[2][2] = null;
+      const o = opties(ans, R.shuf([F(vs[2], cs[2], { n: 1 }), F(vs[2], cs[2], { n: 3 }), F(vs[2], cs[1], { n: 2 }), F(vs[1], cs[2], { n: 2 }), F(vs[2], cs[0], { n: 2 })]));
+      return o && { type: 'matrix', grid, opts: o, ans: 0, why: `Twee ${kleurWoord(cs[2])} ${VORM_MV[vs[2]]}: elke rij heeft één vorm, elke kolom één kleur, en het aantal (1, 2, 3) komt in elke rij en kolom één keer voor.` };
     }
     // latijns vierkant: vorm (r+c), kleur (r+2c) mod 3
     const grid = [0, 1, 2].map(r => [0, 1, 2].map(c => F(vs[(r + c) % 3], cs[(r + 2 * c) % 3]))); const ans = grid[2][2]; grid[2][2] = null;
@@ -426,6 +440,12 @@ const GEN = (() => {
       const ander = mode === 'n' ? kl(basis, { n: 3 }) : mode === 's' ? kl(basis, { s: 'l' }) : kl(basis, { f: 'leeg' });
       cells = Array.from({ length: n }, (_, i) => i === pos ? ander : basis);
       why = `Plaatje ${'ABCDE'[pos]} is anders: ${mode === 'n' ? 'het heeft een ander aantal' : mode === 's' ? 'het is groter' : 'het is leeg'}.`;
+    } else if (d >= 16 && R.r() < .5) {
+      // vorm en kleur horen bij elkaar; één plaatje breekt die koppeling
+      const [v1, v2] = R.shuf(VORMEN).slice(0, 2), [c1, c2] = R.shuf(KLEUREN).slice(0, 2);
+      cells = Array.from({ length: n }, (_, i) => i % 2 ? F(v2, c2, { n: R.int(1, 3) }) : F(v1, c1, { n: R.int(1, 3) }));
+      cells[pos] = pos % 2 ? F(v2, c1, { n: cells[pos].n || 1 }) : F(v1, c2, { n: cells[pos].n || 1 });
+      why = `Alle ${VORM_MV[v1]} zijn ${c1} en alle ${VORM_MV[v2]} zijn ${c2}. Plaatje ${'ABCDE'[pos]} breekt die regel. Het aantal doet er niet toe.`;
     } else {
       // de anderen verschillen in kleur (afleiding), de regel zit in het aantal of de vorm
       const cs = R.shuf(KLEUREN), mode = R.pick(['n', 'k']);
@@ -470,6 +490,14 @@ const GEN = (() => {
     if (d <= 14) {
       const a = R.int(2, 3), b = R.int(2, 3);
       return { type: 'balance', facts: [[[[X, 1]], [[Y, a]]], [[[Y, 1]], [[Z, b]]]], ask: [[[X, 1]], '?'], askline: `Hoeveel ${MV[Z]}?`, opts: opties(a * b, R.shuf([a + b, a * b - 1, a * b + 1, b, a * b + b]).filter(v => v > 0 && v !== a * b)), ans: 0, why: `${a * b}: 1 ${X} = ${a} ${MV[Y]}, en elke ${Y} = ${b} ${MV[Z]}. Dus ${a} × ${b} = ${a * b}.` };
+    }
+    if (d >= 17 && R.r() < .6) {
+      if (R.r() < .5) {
+        const a = R.int(2, 3), b = R.int(2, 3), m = 2;
+        return { type: 'balance', facts: [[[[X, 1]], [[Y, a]]], [[[Y, 1]], [[Z, b]]]], ask: [[[X, m]], '?'], askline: `Hoeveel ${MV[Z]}?`, opts: opties(m * a * b, R.shuf([a * b, m * a + b, m * a * b - 2, m * a * b + 2, a * b + m]).filter(v => v > 0 && v !== m * a * b)), ans: 0, why: `${m * a * b}: 1 ${X} = ${a} ${MV[Y]} = ${a} × ${b} = ${a * b} ${MV[Z]}. Twee keer zoveel is ${m * a * b}.` };
+      }
+      const k = R.int(2, 3), n = 2 * k;
+      return { type: 'balance', facts: [[[[X, 2]], [[Y, 1]]], [[[Y, 1]], [[Z, n]]]], ask: [[[X, 1]], '?'], askline: `Hoeveel ${MV[Z]}?`, opts: opties(k, R.shuf([n, 2 * n, k + 1, k - 1, n - 1]).filter(v => v > 0 && v !== k)), ans: 0, why: `${k}: 2 ${MV[X]} wegen samen evenveel als ${n} ${MV[Z]}. Eén ${X} is dus de helft: ${k}.` };
     }
     const a = R.int(2, 4), y = R.int(1, 4), n = a + y;
     if (n > 6) return null;
@@ -659,14 +687,26 @@ function getItem(id) {
   if (typeof id === 'string' && id.startsWith('G:') && typeof GEN !== 'undefined') { if (!(id in GEN_CACHE)) GEN_CACHE[id] = GEN.fromId(id); return GEN_CACHE[id]; }
   return null;
 }
-function genId(type, d) {
-  for (let k = 0; k < 20; k++) {
+/* Inhoud van een puzzel zonder de volgorde van de afleiders: twee puzzels met dezelfde vraag en hetzelfde antwoord tellen als dezelfde. */
+function stemSig(it) {
+  if (!it) return '';
+  if (it.type === 'odd') return 'odd:' + it.cells.map(c => JSON.stringify(c)).sort().join('|');
+  const { id, lvl, gen, opts, ans, why, bonus, ...rest } = it;
+  return it.type + ':' + JSON.stringify(rest) + '=' + JSON.stringify(opts ? opts[ans] : ans);
+}
+function sigSeen(sig) { return !!(S.sigs && S.sigs[sig]); }
+function genId(type, d, taken) {
+  let best = null, bestAt = Infinity;
+  for (let k = 0; k < 40; k++) {
     const lvl = Math.max(1, Math.min(20, d + [-1, 0, 0, 1][Math.floor(Math.random() * 4)]));
     const id = `G:${type}:${lvl}:${Math.floor(Math.random() * 1e9)}`;
-    if (S.seen[id]) continue;
-    if (getItem(id)) return id;
+    const it = getItem(id); if (!it) continue;
+    const sig = stemSig(it);
+    if (taken && taken.has(sig)) continue;
+    if (!sigSeen(sig)) return id;
+    if (S.sigs[sig] < bestAt) { best = id; bestAt = S.sigs[sig]; }
   }
-  return null;
+  return best;
 }
 const EXAMPLES = {}; DATA.examples.forEach(e => { EXAMPLES[e.type] = e; });
 
@@ -840,15 +880,17 @@ function pickItems(n, boss) {
   // terugkomers: eerder niet zelf opgelost
   S.retry.filter(id => getItem(id)).slice(0, boss ? 1 : 2).forEach(id => chosen.push(id));
   // eerst nog niet gespeelde puzzels uit het lesprogramma rond dit niveau, daarna de puzzelmaker
-  const byType = {};
-  shuffle(DATA.items.filter(it => it.lvl >= d - 1 && it.lvl <= d + 1 && !S.seen[it.id] && !chosen.includes(it.id))).forEach(it => { (byType[it.type] = byType[it.type] || []).push(it.id); });
+  const byType = {}, taken = new Set(chosen.map(id => stemSig(getItem(id))));
+  shuffle(DATA.items.filter(it => it.lvl >= d - 1 && it.lvl <= d + 1 && !S.seen[it.id] && !chosen.includes(it.id) && !sigSeen(stemSig(it)))).forEach(it => { (byType[it.type] = byType[it.type] || []).push(it.id); });
   const types = shuffle(Object.keys(TYPE_NAMES));
   let guard = 0;
   while (chosen.length < n && guard++ < 50) {
     for (const t of types) {
       if (chosen.length >= n) break;
-      const id = (byType[t] || []).shift() || (typeof GEN !== 'undefined' ? genId(t, d) : null);
-      if (id && !chosen.includes(id)) chosen.push(id);
+      let id = (byType[t] || []).shift();
+      if (id && taken.has(stemSig(getItem(id)))) id = null;
+      if (!id && typeof GEN !== 'undefined') id = genId(t, d, taken);
+      if (id && !chosen.includes(id)) { chosen.push(id); taken.add(stemSig(getItem(id))); }
     }
   }
   return shuffle(chosen).map(id => ({ id, order: optionOrder(getItem(id)) }));
@@ -910,6 +952,7 @@ function finishItem(solved) {
   if (!day.bonus) { day.bonus = true; xp += 20; c.dayBonus = true; const st = streak(); if (st > 0 && st % 5 === 0) { xp += 50; c.streak = st; } }
   addXP(xp); c.xp = xp;
   S.seen[it.id] = { n: (S.seen[it.id] ? S.seen[it.id].n : 0) + 1, at: now };
+  (S.sigs = S.sigs || {})[stemSig(it)] = now;
   if (!solved || c.tries > 0) { if (!S.retry.includes(it.id)) S.retry.push(it.id); }
   else S.retry = S.retry.filter(x => x !== it.id);
   const att = { k: it.id, type: it.type, lvl: it.lvl, at: now, w: r.world, s: r.stop, season: S.prog.season, boss: r.boss, picks: c.picks.slice(), order: r.items[r.idx].order, first: solved && c.tries === 0, hints: Math.min(c.tries, 2), solved, ms, removed: c.removed.slice() };
@@ -929,7 +972,8 @@ function finishStop() {
   S.stops.push(rec);
   // adaptief niveau
   const p = S.prog; p.recent.push(pct);
-  if (p.recent.length >= 2 && p.recent.slice(-2).every(x => x > 85) && p.d < 20) { S.events.push({ at: Date.now(), type: 'up', from: p.d, to: p.d + 1, pcts: p.recent.slice(-2) }); p.d++; p.recent = []; }
+  if (pct >= 95 && p.d < 20) { const to = Math.min(20, p.d + 2); S.events.push({ at: Date.now(), type: 'up', from: p.d, to, pcts: [pct], fast: true }); p.d = to; p.recent = []; }
+  else if (p.recent.length >= 2 && p.recent.slice(-2).every(x => x > 85) && p.d < 20) { S.events.push({ at: Date.now(), type: 'up', from: p.d, to: p.d + 1, pcts: p.recent.slice(-2) }); p.d++; p.recent = []; }
   else if (pct < 60 && p.d > 1) { S.events.push({ at: Date.now(), type: 'down', from: p.d, to: p.d - 1, pcts: [pct] }); p.d--; p.recent = []; }
   if (r.boss) {
     S.bosses.push({ w: r.world, season: p.season, at: Date.now(), atts: r.res.map(x => x.ai), stars: {}, reviewed: false });
@@ -988,7 +1032,7 @@ function hud(sub, title) {
 }
 function bindHud() {
   const s = $('#hud-shop'), m = $('#hud-map'), o = $('#hud-out');
-  if (s) s.onclick = () => go('shop');
+  if (s) s.onclick = () => { tryItem = null; go('shop'); };
   if (m) m.onclick = () => go('map');
   if (o) o.onclick = () => { devSet({ remember: false }); go('start'); };
 }
@@ -1233,18 +1277,19 @@ function renderPlay() {
   const it = curItem(); if (!it) return finishStop();
   const w = worldOf(r.world);
   // nieuw soort puzzel: eerst voorbeeld
-  if (!S.kid.seenTypes.includes(it.type) && EXAMPLES[it.type] && !r.cur) {
-    const ex = fillDeep(EXAMPLES[it.type]), exIt = Object.assign({ opts: [] }, ex.item);
+  const kind = kindOf(it); S.kid.seenKinds = S.kid.seenKinds || [];
+  if (!S.kid.seenKinds.includes(kind) && !r.cur) {
+    const ex = exampleFor(it), isNew = !S.kid.seenTypes.includes(it.type);
     app.innerHTML = `<div class="kid">${hud(w.name, r.boss ? 'Eindbaas' : w.stops[r.stop])}<div class="wrap"><div class="newtype pop">
-      <h2 style="font-family:var(--display);font-weight:400">Nieuw soort puzzel: ${esc(TYPE_NAMES[it.type])}!</h2>
-      ${ex.text ? `<p>${esc(ex.text)}</p>` : ''}
-      <div class="board">${exampleBody(exIt)}</div>
-      <div class="bubble sol"><b>Zo werkt het</b><br>${esc(ex.explain)}</div>
+      <h2 style="font-family:var(--display);font-weight:400">${isNew ? 'Nieuw soort puzzel' : 'Nieuwe uitdaging'}: ${esc(TYPE_NAMES[it.type])}!</h2>
+      <p>${esc(KIND_TEXT[kind] || '')}</p>
+      ${ex ? `<p class="small" style="color:var(--soft)">Zo ziet zo'n puzzel eruit. Het goede antwoord is groen.</p><div class="board">${exampleBody(ex)}</div>
+      <div class="bubble sol"><b>Zo werkt het</b><br>${esc(ex.why || '')}</div>` : ''}
       <div><button class="cta" type="button" id="got">Snap ik, verder!</button> <button class="iconbtn" type="button" id="say" aria-label="Lees voor" style="display:inline-grid;vertical-align:middle"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#38e1ff"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="#38e1ff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button></div>
     </div></div></div>`;
     bindHud();
-    $('#got').onclick = () => { S.kid.seenTypes.push(it.type); save(); renderPlay(); };
-    $('#say').onclick = () => speak((ex.text || '') + ' ' + ex.explain);
+    $('#got').onclick = () => { S.kid.seenKinds.push(kind); if (isNew) S.kid.seenTypes.push(it.type); save(); renderPlay(); };
+    $('#say').onclick = () => speak((KIND_TEXT[kind] || '') + ' ' + (ex ? ex.why || '' : ''));
     return;
   }
   if (!r.cur) { r.cur = { t0: Date.now(), tries: 0, picks: [], removed: [], done: false, grid: {} }; save(); activity(); }
@@ -1277,10 +1322,44 @@ function renderPlay() {
   const nx = $('#next'); if (nx) { nx.onclick = nextItem; nx.focus(); }
   $('#stopnow').onclick = () => { toast('Opgeslagen. Je gaat later precies hier verder.'); go('map'); };
 }
-function exampleBody(it) {
-  const order = it.type === 'odd' ? it.cells.map((_, i) => i) : (it.opts || []).map((_, i) => i);
-  const saved = S.run; const cellHtml = puzzleBody(it, order, { gone: [], right: null, interactive: false, locked: true });
-  return cellHtml;
+/* Soort puzzel in detail, zodat het voorbeeld echt lijkt op de puzzel die erna komt. */
+function kindOf(it) {
+  switch (it.type) {
+    case 'series': { const ks = it.seq.filter(Boolean).map(f => f.k); if (ks.includes('pijl')) return 'series:pijl'; if (ks.includes('raster')) return 'series:raster'; return it.seq.filter(Boolean).some(f => (f.n || 1) > 1) ? 'series:aantal' : 'series:vorm'; }
+    case 'matrix': { const cells = it.grid.flat().filter(Boolean); return `matrix:${it.grid.length}x${it.grid[0].length}` + (it.grid.length > 2 && cells.some(f => (f.n || 1) > 1) ? ':aantal' : ''); }
+    case 'balance': return it.facts.length === 1 ? 'balance:een' : it.facts[0][0].length > 1 ? 'balance:min' : 'balance:keten';
+    case 'text': return /^Welk getal|\d+\s*·\s*\d+/.test(it.q || '') ? 'text:getallen' : 'text:woorden';
+    case 'grid': return 'grid';
+    default: return it.type;
+  }
+}
+const KIND_TEXT = {
+  'odd': 'Eén plaatje is anders dan de rest. Kijk naar vorm, kleur, grootte, hoeveel, vol of leeg en welke kant op.',
+  'series:vorm': 'Zoek het stukje dat steeds terugkomt, of kijk wat er elke keer verandert.',
+  'series:aantal': 'Tel hoeveel het er bij elk plaatje zijn. Hoeveel komen erbij of gaan eraf?',
+  'series:pijl': 'Kijk welke kant de pijl op wijst. Hoe ver draait hij elke keer?',
+  'series:raster': 'Kijk in welk vakje het blokje staat. Naar welk vakje gaat het elke keer?',
+  'matrix:2x2': 'Kijk wat er in de bovenste rij gebeurt van links naar rechts. In de onderste rij gebeurt precies hetzelfde.',
+  'matrix:3x3': 'Kijk naar elke rij en elke kolom. Wat blijft hetzelfde en wat verandert er?',
+  'matrix:3x3:aantal': 'Let op drie dingen: de vorm, de kleur en hoeveel het er zijn. Kijk per rij en per kolom.',
+  'analogy': 'Kijk wat er gebeurt van het eerste naar het tweede plaatje. Doe precies hetzelfde met het derde plaatje.',
+  'balance:een': 'De weegschaal is in balans: links weegt even zwaar als rechts. Reken uit hoeveel er nodig is voor de vraag.',
+  'balance:keten': 'Soms heb je twee weegschalen nodig. Gebruik wat je van de eerste weet bij de tweede.',
+  'balance:min': 'Op de eerste weegschaal liggen twee dingen samen. Je weet hoeveel één ervan weegt. Wat blijft er over voor de ander?',
+  'text:getallen': 'Schrijf de sprongen tussen de getallen klein eronder. Zie je een patroon in de sprongen?',
+  'text:woorden': 'Lees de zinnen één voor één. Zet de namen op een rij of maak een tekening.',
+  'grid': 'Gebruik het rooster: zet een ✗ als iets niet kan en een ✓ als het zeker is.',
+};
+function exampleFor(it) {
+  const kind = kindOf(it), sig = stemSig(it);
+  const near = DATA.items.filter(x => x.type === it.type && x.id !== it.id && kindOf(x) === kind && stemSig(x) !== sig).sort((a, b) => Math.abs(a.lvl - it.lvl) - Math.abs(b.lvl - it.lvl));
+  if (near.length) return fillDeep(near[0]);
+  if (typeof GEN !== 'undefined') for (let seed = 1; seed <= 80; seed++) { const x = GEN.make(it.type, it.lvl || S.prog.d, seed); if (x && kindOf(x) === kind && stemSig(x) !== sig) return x; }
+  return null;
+}
+function exampleBody(ex) {
+  const order = ex.type === 'odd' ? ex.cells.map((_, i) => i) : (ex.opts || []).map((_, i) => i);
+  return puzzleBody(ex, order, { gone: [], right: ex.ans, picked: [], interactive: false, locked: true });
 }
 
 function showStopDone(rec, xp, bonus, run) {
@@ -1308,31 +1387,43 @@ function shopIcon(x) {
   if (x.slot === 'shoes') return `<svg viewBox="0 0 60 44"><path d="M8 14 L28 14 L30 24 L52 28 Q56 30 54 36 L8 36 Z" fill="${x.color}" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/><path d="M8 36 L54 36" stroke="#0b0f20" stroke-width="3"/></svg>`;
   return `<svg viewBox="0 0 60 44">${x.id === 'e-ster' ? shape('ster', 30, 22, 17, x.color, 'vol', 0) : x.id === 'e-bal' ? icon('voetbal', 30, 22, 16) : `<path d="M30 2 L50 14 L30 42 L10 14 Z" fill="#1d3f9a" stroke="#0b0f20" stroke-width="2.5" stroke-linejoin="round"/><path d="M33 8 L22 24 L30 24 L26 36 L39 18 L31 18 Z" fill="${x.color}" stroke="#0b0f20" stroke-width="1.5" stroke-linejoin="round"/>`}</svg>`;
 }
+let tryItem = null;
 function renderShop(app) {
   const k = S.kid;
   const reached = Math.min(S.prog.world, WORLDS.length - 1);
+  const tx = tryItem && tryItem.startsWith('t:') ? null : SHOP.find(x => x.id === tryItem);
+  const ti = tryItem && tryItem.startsWith('t:') ? +tryItem.slice(2) : null;
+  const eqShown = tx ? Object.assign({}, k.eq, { [tx.slot]: tx.id }) : k.eq;
   const cats = Object.keys(SLOT_NAMES).map(slot => `<div class="cat"><h3>${SLOT_NAMES[slot]}</h3><div class="items">${SHOP.filter(x => x.slot === slot).map(x => {
-    const own = k.owned.includes(x.id), on = k.eq[slot] === x.id;
-    return `<button class="item ${own ? 'owned' : ''} ${on ? 'on' : ''}" type="button" data-item="${x.id}"><span class="ic">${shopIcon(x)}</span><b>${esc(x.name)}</b><span class="price">${own ? (on ? 'Aan ✓' : 'Van jou · aantrekken') : `<span class="coin">M</span>${x.price}`}</span></button>`;
+    const own = k.owned.includes(x.id), on = k.eq[slot] === x.id, trying = tx && tx.id === x.id;
+    return `<button class="item ${own ? 'owned' : ''} ${on ? 'on' : ''} ${trying ? 'trying' : ''}" type="button" data-item="${x.id}"><span class="ic">${shopIcon(x)}</span><b>${esc(x.name)}</b><span class="price">${own ? (on ? 'Aan ✓' : 'Van jou · aantrekken') : trying ? 'Aan het passen' : `<span class="coin">M</span>${x.price}`}</span></button>`;
   }).join('')}</div></div>`).join('');
   const trophies = `<div class="cat"><h3>Prijzenkast</h3><div class="items">${WORLDS.map((w, i) => {
     const own = k.trophies.includes(i), open = i <= reached;
-    return `<button class="item special ${own ? 'owned' : ''} ${!open && !own ? 'locked' : ''}" type="button" data-trophy="${i}" ${!open && !own ? 'disabled' : ''}><span class="ic">${w.trophy.icon}</span><b>${esc(w.trophy.name)}</b><span class="price">${own ? 'In je prijzenkast ✓' : open ? `<span class="coin">M</span>${TROPHY_PRICE}` : esc(w.name) + ' · op slot'}</span></button>`;
+    return `<button class="item special ${own ? 'owned' : ''} ${!open && !own ? 'locked' : ''} ${ti === i ? 'trying' : ''}" type="button" data-trophy="${i}" ${!open && !own ? 'disabled' : ''}><span class="ic">${w.trophy.icon}</span><b>${esc(w.trophy.name)}</b><span class="price">${own ? 'In je prijzenkast ✓' : open ? `<span class="coin">M</span>${TROPHY_PRICE}` : esc(w.name) + ' · op slot'}</span></button>`;
   }).join('')}</div></div>`;
+  const price = tx ? tx.price : ti !== null ? TROPHY_PRICE : 0, name = tx ? tx.name : ti !== null ? WORLDS[ti].trophy.name : '';
+  const panel = (tx || ti !== null) ? `<div class="tryon" role="status"><b>${tx ? 'Zo staat het je!' : `${WORLDS[ti].trophy.icon} ${esc(name)}`}</b>
+      <span>${esc(name)} kost <span class="coin">M</span>${price}. ${k.coins >= price ? 'Wil je het kopen?' : `Je hebt nog ${price - k.coins} munten nodig. Puzzelen levert munten op!`}</span>
+      <div class="row">${k.coins >= price ? `<button class="cta" type="button" id="buy">Kopen</button>` : ''}<button class="ghost" type="button" id="nobuy">${k.coins >= price ? 'Annuleren' : 'Terug'}</button></div></div>` : '';
   app.innerHTML = `<div class="kid">${hud('Heldenwinkel', 'Pas en koop')}<div class="wrap"><div class="shop">
-    <div class="stage" id="shop-stage">${heroSVG(k.hero, k.eq)}</div><div style="display:flex;flex-direction:column;gap:14px">${cats}${trophies}</div></div></div></div>`;
+    <div style="display:flex;flex-direction:column;gap:12px"><div class="stage" id="shop-stage">${heroSVG(k.hero, eqShown)}</div>${panel}</div>
+    <div style="display:flex;flex-direction:column;gap:14px">${cats}${trophies}</div></div></div></div>`;
   bindHud();
   app.querySelectorAll('[data-item]').forEach(b => b.onclick = () => {
     const x = SHOP.find(s => s.id === b.dataset.item);
-    if (k.owned.includes(x.id)) { k.eq[x.slot] = k.eq[x.slot] === x.id ? undefined : x.id; save(); return renderShop(app); }
-    if (k.coins < x.price) { toast(`Je hebt nog ${x.price - k.coins} munten nodig. Puzzelen levert munten op!`); return; }
-    k.coins -= x.price; k.owned.push(x.id); k.eq[x.slot] = x.id; save(); renderShop(app); toast(`Gekocht: ${esc(x.name)}!`);
+    if (k.owned.includes(x.id)) { tryItem = null; k.eq[x.slot] = k.eq[x.slot] === x.id ? undefined : x.id; save(); return renderShop(app); }
+    tryItem = tryItem === x.id ? null : x.id; renderShop(app);
   });
   app.querySelectorAll('[data-trophy]').forEach(b => b.onclick = () => {
     const i = +b.dataset.trophy; if (k.trophies.includes(i)) return;
-    if (k.coins < TROPHY_PRICE) { toast(`Spaar nog ${TROPHY_PRICE - k.coins} munten voor de ${esc(WORLDS[i].trophy.name)}.`); return; }
-    k.coins -= TROPHY_PRICE; k.trophies.push(i); save(); renderShop(app); toast(`${WORLDS[i].trophy.icon} ${esc(WORLDS[i].trophy.name)} staat in je prijzenkast!`);
+    tryItem = tryItem === 't:' + i ? null : 't:' + i; renderShop(app);
   });
+  const nb = $('#nobuy'); if (nb) nb.onclick = () => { tryItem = null; renderShop(app); };
+  const bb = $('#buy'); if (bb) bb.onclick = () => {
+    if (tx) { if (k.coins < tx.price) return; k.coins -= tx.price; k.owned.push(tx.id); k.eq[tx.slot] = tx.id; tryItem = null; save(); renderShop(app); toast(`Gekocht: ${esc(tx.name)}!`); }
+    else if (ti !== null) { if (k.coins < TROPHY_PRICE) return; k.coins -= TROPHY_PRICE; k.trophies.push(ti); tryItem = null; save(); renderShop(app); toast(`${WORLDS[ti].trophy.icon} ${esc(WORLDS[ti].trophy.name)} staat in je prijzenkast!`); }
+  };
 }
 
 /* ===================== PARENT ===================== */
@@ -1359,7 +1450,7 @@ function pOverview(body) {
   const ws = weekStart(), week = S.attempts.filter(a => a.at >= ws), stopsW = S.stops.filter(s => s.at >= ws);
   const msW = Object.entries(S.days).filter(([k]) => new Date(k + 'T12:00').getTime() >= ws).reduce((a, [, v]) => a + v.ms, 0);
   const nudW = Object.entries(S.days).filter(([k]) => new Date(k + 'T12:00').getTime() >= ws).reduce((a, [, v]) => a + v.nudges, 0);
-  const ev = S.events.slice().sort((a, b) => a.at - b.at).slice(-3).reverse().map(e => `<div class="alert ${e.type === 'up' ? '' : 'warn'}"><b>${e.type === 'up' ? 'Niveau omhoog.' : 'Niveau iets omlaag.'}</b> ${new Date(e.at).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}: ${e.type === 'up' ? `twee stops op rij meer dan 85% meteen goed (${e.pcts.join('% en ')}%)` : `een stop met ${e.pcts[0]}% meteen goed`}. De app geeft nu puzzels van stap ${e.to} van 20, die meestal passen bij ${groupLabel(e.to)} (schatting).</div>`).join('');
+  const ev = S.events.slice().sort((a, b) => a.at - b.at).slice(-3).reverse().map(e => `<div class="alert ${e.type === 'up' ? '' : 'warn'}"><b>${e.type === 'up' ? 'Niveau omhoog.' : e.type === 'set' ? 'Niveau aangepast.' : 'Niveau iets omlaag.'}</b> ${new Date(e.at).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}: ${e.type === 'set' ? `door jou gezet van stap ${e.from} naar stap ${e.to}` : e.type === 'up' ? (e.fast ? `een stop met ${e.pcts[0]}% meteen goed, daarom twee stappen omhoog` : `twee stops op rij meer dan 85% meteen goed (${e.pcts.join('% en ')}%)`) : `een stop met ${e.pcts[0]}% meteen goed`}. De app geeft nu puzzels van stap ${e.to} van 20, die meestal passen bij ${groupLabel(e.to)} (schatting).</div>`).join('');
   const openBoss = S.bosses.filter(b => !b.reviewed);
   // last 7 days chart
   const days = Array.from({ length: 7 }, (_, i) => { const t = Date.now() - (6 - i) * 864e5, k = dayKey(t); return { k, label: new Date(t).toLocaleDateString('nl-NL', { weekday: 'short' }).slice(0, 2), m: Math.round(((S.days[k] || {}).ms || 0) / 60000) }; });
@@ -1395,11 +1486,14 @@ function pOverview(body) {
         <p>Wereld <b>${(S.prog.world % WORLDS.length) + 1}: ${esc(worldOf(S.prog.world).name)}</b>${S.prog.season > 1 ? ` (seizoen ${S.prog.season})` : ''}, stop ${S.prog.stop + 1} van 5.</p>
         <p>Moeilijkheid: stap <b>${S.prog.d}</b> van 20, dat is het ${weekLabel(S.prog.d)}. De app begon op stap 11, het begin van week 3. Puzzels op deze stap passen meestal bij <b>${groupLabel(S.prog.d)}</b>.</p>
         <p class="small">Dit is een schatting op basis van de soort puzzels, geen meting. ${esc(KN())} ziet deze informatie niet.</p>
+        <div class="pform"><label for="setd">Zelf aanpassen</label><select id="setd">${Array.from({ length: 20 }, (_, i) => i + 1).map(d => `<option value="${d}" ${d === S.prog.d ? 'selected' : ''}>stap ${d} · ${weekLabel(d)}</option>`).join('')}</select><button class="pbtn" type="button" id="setdgo">Zet moeilijkheid</button></div>
+        <p class="small">De app past de moeilijkheid zelf aan: een stop helemaal goed is twee stappen omhoog, twee stops op rij boven 85% is één stap omhoog, een stop onder 60% is één stap omlaag.</p>
         <p>Rang: <b>${RANKS[rankOf(S.kid.xp)][0]}</b> · ${fmt(S.kid.xp)} XP · ${S.kid.coins} munten</p></div>
       <div class="card"><h2>Plezier</h2>${funs.length ? `<p>Laatste cijfers die ${esc(KN())} gaf: <b>${funs.join(' · ')}</b> (gemiddeld ${(funs.reduce((a, b) => a + b, 0) / funs.length).toFixed(1)})</p>` : '<p class="small">Na elke stop geeft ' + esc(KN()) + ' een cijfer van 1 tot 10. Die verschijnen hier.</p>'}
         <p class="small">Een paar lage cijfers achter elkaar? Dan is het misschien te moeilijk of te lang. Praat er even met hem over.</p></div>
     </div>`;
   const tb = $('#toboss'); if (tb) tb.onclick = () => { ptab = 'eindbaas'; renderParent($('#app')); };
+  $('#setdgo').onclick = () => { const to = +$('#setd').value, p = S.prog; if (to === p.d) return; S.events.push({ at: Date.now(), type: 'set', from: p.d, to }); p.d = to; p.recent = []; save(); toast(`Moeilijkheid staat nu op stap ${to}.`); renderParent($('#app')); };
 }
 function reviewCard(a, extra = '') {
   const it = getItem(a.k); if (!it) return '';
