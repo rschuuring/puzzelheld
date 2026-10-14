@@ -342,6 +342,16 @@ body.parent #sync.off { background: #fff4dc; color: #8a5800; }
 /* ===================== DATA ===================== */
 const DATA = /*DATA*/null;
 const CFG = /*CONFIG*/{ "url": "", "key": "" };
+const BUILD = /*BUILD*/0;
+// nieuwe versie online? dan zelf verversen (niet midden in een puzzel); ?v= omzeilt de browsercache
+async function checkUpdate() {
+  if (!BUILD || location.protocol === 'file:') return;
+  try {
+    const t = await (await fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' })).text();
+    const m = t.match(/const BUILD = (\d+);/);
+    if (m && +m[1] > BUILD && view !== 'play') { if (S) saveLocal(); if (pushT) await push(); location.replace(location.pathname + '?v=' + m[1]); }
+  } catch (e) { /* offline: later opnieuw */ }
+}
 const ONLINE = !!(CFG.url && CFG.key && window.supabase);
 const sb = ONLINE ? window.supabase.createClient(CFG.url, CFG.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
 const TEST_MODE = location.hash === '#test';
@@ -1601,10 +1611,10 @@ async function boot() {
   if (!session) { view = 'auth'; return render(); }
   USER = session.user; await startUser();
 }
-boot();
+boot(); checkUpdate();
 document.addEventListener('visibilitychange', async () => {
   if (document.hidden) { if (pushT) push(); return; }
-  lastAct = Date.now();
+  lastAct = Date.now(); checkUpdate();
   if (ONLINE && USER && view !== 'play' && view !== 'newpw' && view !== 'auth') { if (await pull()) { if (view !== 'p-main' && (!S || !S.kid)) view = 'start'; render(); } }
 });
 </script>
