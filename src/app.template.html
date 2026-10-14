@@ -1095,6 +1095,9 @@ function puzzleBody(it, order, mark) {
 function renderPlay() {
   const app = $('#app'); view = 'play'; document.body.className = '';
   const r = S.run; if (!r) return go('map');
+  // een stop die met een oudere versie is begonnen: puzzels die nog niet gestart zijn opnieuw kiezen als ze niet bij deze stop horen
+  const keep = r.idx + (r.cur ? 1 : 0), ok = typesFor(r.stop, r.boss), rest = r.items.slice(keep);
+  if (rest.some(x => !getItem(x.id) || !ok.includes(getItem(x.id).type))) { r.items = r.items.slice(0, keep).concat(pickItems(rest.length, r.boss, r.stop)); save(); }
   const it = curItem(); if (!it) return finishStop();
   const w = worldOf(r.world);
   // nieuw soort puzzel: eerst voorbeeld
