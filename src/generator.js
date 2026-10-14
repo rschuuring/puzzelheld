@@ -218,7 +218,118 @@ const GEN = (() => {
   const een = (c, k) => 'een ' + (HET.includes(k) && c !== 'oranje' ? c : kleurWoord(c)) + ' ' + k;
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  const MAKERS = { text: getallen, matrix, series: reeks, odd: anders, analogy: analogie, balance: weegschaal, grid: rooster };
+  /* ---- codekraker (zoals Mastermind) ---- */
+  const fb = (g, sec) => { let b = 0; g.forEach((x, i) => { if (sec[i] === x) b++; }); const common = g.filter(x => sec.includes(x)).length; return { b, w: common - b }; };
+  function perms(pool, n) { if (!n) return [[]]; const out = []; pool.forEach(x => perms(pool.filter(y => y !== x), n - 1).forEach(p => out.push([x, ...p]))); return out; }
+  function codekraker(R, d) {
+    const pool = R.shuf(KLEUREN).slice(0, d <= 10 ? 3 : d <= 16 ? 4 : 5), all = perms(pool, 3);
+    for (let tries = 0; tries < 30; tries++) {
+      const sec = R.pick(all), guesses = [];
+      let cand = all;
+      while (cand.length > 1 && guesses.length < 4) {
+        const g = R.pick(all.filter(x => key(x) !== key(sec) && !guesses.some(y => key(y.g) === key(x))));
+        const f = fb(g, sec); guesses.push({ g, b: f.b, w: f.w });
+        cand = cand.filter(c => { const h = fb(g, c); return h.b === f.b && h.w === f.w; });
+      }
+      if (cand.length !== 1 || guesses.length < (d <= 10 ? 2 : 2)) continue;
+      // afleiders: codes die bij bijna alle hints passen
+      const score = c => guesses.filter(gu => { const h = fb(gu.g, c); return h.b === gu.b && h.w === gu.w; }).length;
+      const wrong = R.shuf(all.filter(c => key(c) !== key(sec))).sort((a, b) => score(b) - score(a));
+      const o = opties({ k: 'code', p: sec }, wrong.map(c => ({ k: 'code', p: c })));
+      if (!o) continue;
+      return { type: 'code', q: 'Kraak de geheime code! ● = goede kleur op de goede plek. ○ = goede kleur, maar op een andere plek.', guesses, opts: o, ans: 0, why: `${sec.join(' – ')}. Alleen deze code geeft bij elke gok precies het goede aantal ● en ○.` };
+    }
+    return null;
+  }
+
+  /* ---- mini-sudoku 4x4 ---- */
+  let SUDOKUS = null;
+  function alleSudokus() {
+    if (SUDOKUS) return SUDOKUS; SUDOKUS = [];
+    const g = Array(16).fill(-1);
+    const ok = (i, v) => { const r = i >> 2, c = i & 3; for (let k = 0; k < 4; k++) { if (g[r * 4 + k] === v || g[k * 4 + c] === v) return false; } const br = r - r % 2, bc = c - c % 2; for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) if (g[(br + a) * 4 + bc + b] === v) return false; return true; };
+    const fill = i => { if (i === 16) { SUDOKUS.push(g.slice()); return; } for (let v = 0; v < 4; v++) if (ok(i, v)) { g[i] = v; fill(i + 1); g[i] = -1; } };
+    fill(0); return SUDOKUS;
+  }
+  function sudoku(R, d) {
+    const all = alleSudokus(), vs = R.shuf(VORMEN).slice(0, 4), cs = R.shuf(KLEUREN).slice(0, 4);
+    const sym = i => F(vs[i], cs[i]);
+    const nGiven = d <= 6 ? 12 : d <= 10 ? 10 : d <= 15 ? 8 : 7;
+    for (let tries = 0; tries < 60; tries++) {
+      const sol = R.pick(all), q = R.int(0, 15);
+      const others = R.shuf([...Array(16).keys()].filter(i => i !== q));
+      const given = new Set(others.slice(0, nGiven));
+      const fits = all.filter(x => [...given].every(i => x[i] === sol[i]));
+      if (!fits.every(x => x[q] === sol[q])) continue;
+      // bij hogere stappen: het vraagteken mag niet al uit alleen zijn rij volgen
+      const r = q >> 2; const rowGiven = [0, 1, 2, 3].filter(c => given.has(r * 4 + c)).length;
+      if (d >= 11 && rowGiven === 3) continue;
+      const cells = [...Array(16).keys()].map(i => given.has(i) ? sym(sol[i]) : null);
+      const o = opties(sym(sol[q]), R.shuf([0, 1, 2, 3].filter(v => v !== sol[q])).map(sym));
+      return { type: 'sudoku', q: 'Mini-sudoku: in elke rij, elke kolom en elk blokje van 2 bij 2 staat elke vorm precies één keer. Wat hoort op het vraagteken?', cells, qi: q, opts: o, ans: 0, why: `${cap(een(cs[sol[q]], vs[sol[q]]))}. Kijk naar de rij, de kolom en het blokje: die vorm mist daar nog.` };
+    }
+    return null;
+  }
+
+  /* ---- spiegelen ---- */
+  function spiegelen(R, d) {
+    const g = d <= 10 ? 3 : 4, nCells = d <= 6 ? 3 : d <= 12 ? 4 : 5, twee = d >= 9;
+    const kleuren = R.shuf(KLEUREN).slice(0, twee ? 2 : 1);
+    const axis = d >= 15 && R.r() < .5 ? 'h' : 'v';
+    const flipV = p => p.map(([i, c]) => [Math.floor(i / g) * g + (g - 1 - i % g), c]);
+    const flipH = p => p.map(([i, c]) => [(g - 1 - Math.floor(i / g)) * g + i % g, c]);
+    const norm = p => p.slice().sort((a, b) => a[0] - b[0]);
+    const fig = p => ({ k: 'raster', g, p: norm(p) });
+    for (let tries = 0; tries < 40; tries++) {
+      const pos = R.shuf([...Array(g * g).keys()]).slice(0, nCells);
+      const src = pos.map((i, j) => [i, kleuren[j % kleuren.length]]);
+      const ans = axis === 'v' ? flipV(src) : flipH(src);
+      if (key(norm(ans)) === key(norm(src))) continue;
+      const moved = ans.map((x, j) => j === 0 ? [(x[0] + 1) % (g * g), x[1]] : x);
+      const recol = twee ? ans.map(([i, c]) => [i, c === kleuren[0] ? kleuren[1] : kleuren[0]]) : null;
+      const cand = [src, axis === 'v' ? flipH(src) : flipV(src), flipH(flipV(src)), recol, moved].filter(Boolean).map(fig).filter(f => new Set(f.p.map(x => x[0])).size === f.p.length);
+      const o = opties(fig(ans), R.shuf(cand));
+      if (!o) continue;
+      return { type: 'mirror', q: axis === 'v' ? 'De spiegel staat rechts van het plaatje. Wat zie je in de spiegel?' : 'De spiegel staat onder het plaatje. Wat zie je in de spiegel?', src: fig(src), axis, opts: o, ans: 0, why: axis === 'v' ? 'In een spiegel wordt links rechts. Wat dicht bij de spiegel zit, blijft dicht bij de spiegel. Boven en onder blijven hetzelfde.' : 'In een spiegel eronder wordt boven onder. Wat dicht bij de spiegel zit, blijft dicht bij de spiegel. Links en rechts blijven hetzelfde.' };
+    }
+    return null;
+  }
+
+  /* ---- robotroute ---- */
+  const DIRS = { '→': [0, 1], '←': [0, -1], '↓': [1, 0], '↑': [-1, 0] };
+  function loop(n, walls, start, moves) { let [r, c] = start; for (const m of moves) { r += DIRS[m][0]; c += DIRS[m][1]; if (r < 0 || c < 0 || r >= n || c >= n || walls.has(r * n + c)) return null; } return [r, c]; }
+  function robotroute(R, d) {
+    const n = d <= 8 ? 4 : 5, nWalls = d <= 5 ? 1 : d <= 10 ? 3 : d <= 15 ? 5 : 7, minLen = d <= 5 ? 3 : d <= 12 ? 5 : 6;
+    for (let tries = 0; tries < 60; tries++) {
+      const cellsAll = R.shuf([...Array(n * n).keys()]);
+      const s = cellsAll[0], t = cellsAll[1], walls = new Set(cellsAll.slice(2, 2 + nWalls));
+      const start = [Math.floor(s / n), s % n], goal = [Math.floor(t / n), t % n];
+      // kortste weg (BFS)
+      const prev = new Map([[s, null]]), qu = [s];
+      while (qu.length) { const x = qu.shift(); if (x === t) break; for (const m of R.shuf(Object.keys(DIRS))) { const r = Math.floor(x / n) + DIRS[m][0], c = x % n + DIRS[m][1], y = r * n + c; if (r < 0 || c < 0 || r >= n || c >= n || walls.has(y) || prev.has(y)) continue; prev.set(y, [x, m]); qu.push(y); } }
+      if (!prev.has(t)) continue;
+      const path = []; for (let x = t; prev.get(x); x = prev.get(x)[0]) path.unshift(prev.get(x)[1]);
+      if (path.length < minLen || path.length > 8) continue;
+      const turns = path.filter((m, i) => i && m !== path[i - 1]).length;
+      if (d >= 11 && turns < 2) continue;
+      const fails = mv => { const e = loop(n, walls, start, mv); return !e || e[0] !== goal[0] || e[1] !== goal[1]; };
+      const cand = [];
+      for (let k = 0; k < 40 && cand.length < 8; k++) {
+        const mv = path.slice(); const kind = R.int(0, 3);
+        if (kind === 0) { const i = R.int(0, mv.length - 1); mv[i] = R.pick(Object.keys(DIRS).filter(x => x !== mv[i])); }
+        else if (kind === 1) mv.splice(R.int(0, mv.length - 1), 1);
+        else if (kind === 2) mv.splice(R.int(0, mv.length), 0, R.pick(Object.keys(DIRS)));
+        else mv.sort(() => R.r() - .5);
+        if (fails(mv)) cand.push(mv.join(' '));
+      }
+      const o = opties(path.join(' '), cand);
+      if (!o) continue;
+      return { type: 'route', q: 'Welke pijlen brengen de robot naar de bal? Hij mag niet tegen een blok of van het veld af.', n, start, goal, walls: [...walls].map(w => [Math.floor(w / n), w % n]), opts: o, ans: 0, why: `${path.join(' ')}: volg de pijlen vanaf de robot, dan kom je om de blokken heen precies bij de bal.` };
+    }
+    return null;
+  }
+
+  const MAKERS = { text: getallen, matrix, series: reeks, odd: anders, analogy: analogie, balance: weegschaal, grid: rooster, code: codekraker, sudoku, mirror: spiegelen, route: robotroute };
   function make(type, d, seed) {
     for (let k = 0; k < 12; k++) {
       const R = mk(rng(seed * 31 + k));

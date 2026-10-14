@@ -243,6 +243,30 @@ table.data th { font-size: 12px; text-transform: uppercase; letter-spacing: .05e
   @keyframes wave { 50% { transform: rotate(-6deg); } }
 }
 
+/* nieuwe puzzelsoorten */
+.codes { display: flex; flex-direction: column; gap: 6px; }
+.crow { display: flex; align-items: center; gap: 10px; }
+.crow .cn { font-size: 14px; color: var(--muted); width: 48px; }
+.cdots svg { width: 84px; height: 28px; } .cdots { line-height: 0; background: #fff; border-radius: 8px; box-shadow: 0 0 0 2px #dfe5f5; }
+.pegs { display: inline-flex; gap: 4px; align-items: center; min-width: 70px; }
+.pegs i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 2px solid #222; }
+.pegs i.pb { background: #222; } .pegs i.pw { background: #fff; }
+.pegs em { font-size: 13px; color: var(--muted); font-style: normal; }
+.opt svg.code { width: 96px; height: 32px; margin: 8px 0; }
+.cdots { padding: 4px 8px; }
+.sudo { display: grid; grid-template-columns: repeat(4, auto); width: fit-content; border: 3px solid #555; background: #fff; }
+.sudo .sc { width: 58px; height: 58px; display: grid; place-items: center; border: 1px solid #c4cbe0; line-height: 0; }
+.sudo .sc svg { width: 46px; height: 46px; }
+.sudo .sc.br { border-right: 3px solid #555; } .sudo .sc.bb { border-bottom: 3px solid #555; }
+.sudo .sc.q { background: #fff6d6; }
+.mir .spiegel { width: 6px; height: 72px; border-radius: 3px; background: repeating-linear-gradient(180deg, #38a0d6 0 8px, #bfe6f8 8px 12px); }
+.mir.h { flex-direction: column; align-items: flex-start; } .mir.h .spiegel { width: 72px; height: 6px; background: repeating-linear-gradient(90deg, #38a0d6 0 8px, #bfe6f8 8px 12px); }
+.route svg { width: 230px; max-width: 100%; height: auto; }
+#printout .pgrid .sudo .sc { width: 26px; height: 26px; } #printout .pgrid .sudo .sc svg { width: 21px; height: 21px; } #printout .pgrid .sudo { border-width: 2px; }
+#printout .pgrid .cdots svg { width: 54px; height: 18px; } #printout .pgrid .opt svg.code { width: 54px; height: 18px; margin: 2px 0; } #printout .pgrid .pegs i { width: 9px; height: 9px; border-width: 1.5px; } #printout .pgrid .crow { gap: 6px; } #printout .pgrid .crow .cn { font-size: 10px; width: 34px; }
+#printout .pgrid .route svg { width: 104px; } #printout .pgrid .opt.txt { letter-spacing: -1px; } #printout .pgrid .mir .spiegel { height: 38px; } #printout .pgrid .mir.h .spiegel { width: 38px; height: 5px; }
+.qcard .sudo .sc { width: 40px; height: 40px; } .qcard .sudo .sc svg { width: 32px; height: 32px; }
+
 /* v1: opslagstatus */
 #sync { position: fixed; right: 10px; bottom: 10px; z-index: 50; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(11,19,48,.85); color: #b8c3e6; border: 1px solid #2a3870; pointer-events: none; }
 #sync.ok { opacity: .55; }
@@ -258,7 +282,7 @@ body.parent #sync.off { background: #fff4dc; color: #8a5800; }
 /* v1: printen */
 #printout { position: fixed; inset: 0; z-index: 100; overflow: auto; background: #e9ecf3; color: #17172b; }
 #printout .pbar { position: sticky; top: 0; display: flex; gap: 10px; align-items: center; padding: 10px 16px; background: #17172b; color: #fff; }
-#printout .sheet { background: #fff; max-width: 820px; margin: 16px auto; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+#printout .sheet { background: #fff; width: 182mm; box-sizing: content-box; margin: 16px auto; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
 #printout h1 { font-family: var(--display); font-weight: 400; font-size: 26px; margin-bottom: 4px; }
 #printout .meta { display: flex; justify-content: space-between; gap: 12px; color: #5b6078; font-size: 14px; border-bottom: 2px solid #17172b; padding-bottom: 8px; margin-bottom: 14px; }
 #printout .pq { break-inside: avoid; page-break-inside: avoid; border: 1px solid #d5dcec; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
@@ -300,7 +324,7 @@ body.parent #sync.off { background: #fff4dc; color: #8a5800; }
   body > *:not(#printout) { display: none !important; }
   #printout { position: static; overflow: visible; background: #fff; }
   #printout .pbar { display: none; }
-  #printout .sheet { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+  #printout .sheet { box-shadow: none; margin: 0; padding: 0; width: 182mm; }
   #printout .pg + .pg { margin-top: 0; padding-top: 0; border-top: 0; }
   @page { margin: 14mm; }
 }
@@ -339,7 +363,7 @@ const RANKS = [
   ['Rookie', 0], ['Sidekick', 400], ['Held', 1000], ['Superheld', 2000],
   ['Kapitein', 3300], ['Kampioen', 5000], ['Legende', 7000], ['Mega-Legende', 9500],
 ];
-const TYPE_NAMES = { odd: 'Wat hoort er niet bij', series: 'Reeksen', matrix: 'Puzzelvakjes', analogy: 'Analogieën', text: 'Getallen en woorden', balance: 'Weegschalen', grid: 'Logica-rooster' };
+const TYPE_NAMES = { odd: 'Wat hoort er niet bij', series: 'Reeksen', matrix: 'Puzzelvakjes', analogy: 'Analogieën', text: 'Getallen en woorden', balance: 'Weegschalen', grid: 'Logica-rooster', code: 'Codekraker', sudoku: 'Mini-sudoku', mirror: 'Spiegelen', route: 'Robotroute' };
 const SKINS = ['#f3cfb0', '#e3ad86', '#c98b5d', '#a8693f', '#7d4a2a', '#57301b'];
 const HAIRS = ['#20140d', '#5a3a22', '#a0662f', '#e2b65a', '#b8342a'];
 const STYLES = [['kort', 'Kort'], ['stekels', 'Stekels'], ['krullen', 'Krullen'], ['lang', 'Lang']];
@@ -515,8 +539,9 @@ function shape(kind, cx, cy, r, color, fill, rot) {
 const LINES = { h: 'M12,50 L88,50', v: 'M50,12 L50,88', d1: 'M14,14 L86,86', d2: 'M86,14 L14,86', t: 'M12,12 L88,12', b: 'M12,88 L88,88', l: 'M12,12 L12,88', r: 'M88,12 L88,88' };
 function figInner(f) {
   if (f.k === 'raster') {
+    const g = f.g || 3, w = 84 / g;
     const filled = {}; (f.p || []).forEach(p => { if (Array.isArray(p)) filled[p[0]] = p[1]; else filled[p] = f.c; });
-    let o = ''; for (let i = 0; i < 9; i++) { const r = Math.floor(i / 3), c = i % 3; o += `<rect x="${8 + c * 28}" y="${8 + r * 28}" width="28" height="28" fill="${filled[i] !== undefined ? COLORS[filled[i]] : 'white'}" stroke="#555" stroke-width="2"/>`; }
+    let o = ''; for (let i = 0; i < g * g; i++) { const r = Math.floor(i / g), c = i % g; o += `<rect x="${8 + c * w}" y="${8 + r * w}" width="${w}" height="${w}" fill="${filled[i] !== undefined ? COLORS[filled[i]] : 'white'}" stroke="#555" stroke-width="2"/>`; }
     return o;
   }
   if (f.k === 'lijnen') { const c = COLORS[f.c]; return (f.p || []).map(code => code === 'o' ? `<circle cx="50" cy="50" r="22" fill="none" stroke="${c}" stroke-width="6"/>` : `<path d="${LINES[code]}" stroke="${c}" stroke-width="6" stroke-linecap="round" fill="none"/>`).join(''); }
@@ -526,6 +551,7 @@ function figInner(f) {
 }
 function fig(f) {
   if (!f) return '<svg viewBox="0 0 100 100" aria-label="vraagteken"><text x="50" y="68" text-anchor="middle" font-size="56" font-weight="bold" fill="#b58600">?</text></svg>';
+  if (f.k === 'code') return `<svg class="code" viewBox="0 0 ${f.p.length * 30} 30">${f.p.map((c, i) => `<circle cx="${15 + 30 * i}" cy="15" r="11" fill="${COLORS[c]}" stroke="#222" stroke-width="1.5"/>`).join('')}</svg>`;
   return `<svg viewBox="0 0 100 100">${figInner(f)}</svg>`;
 }
 let clipN = 0;
@@ -641,15 +667,20 @@ function ensureDay(t = Date.now()) { const k = dayKey(t); if (!S.days[k]) S.days
 function addXP(n, why) { const before = rankOf(S.kid.xp); S.kid.xp += n; const after = rankOf(S.kid.xp); if (after > before) pendingRankUp = after; return n; }
 let pendingRankUp = null;
 
-function pickItems(n, boss) {
+const NEW_TYPES = ['code', 'sudoku', 'mirror', 'route'];
+const CLASSIC_TYPES = Object.keys(TYPE_NAMES).filter(t => !NEW_TYPES.includes(t));
+/* Stop 1-3: de bekende soorten. Stop 4: codekraker, mini-sudoku, spiegelen en robotroute. Eindbaas: alles door elkaar. */
+function typesFor(stopIdx, boss) { return boss ? Object.keys(TYPE_NAMES) : stopIdx === 3 ? NEW_TYPES : CLASSIC_TYPES; }
+function pickItems(n, boss, stopIdx) {
+  const allowed = typesFor(stopIdx, boss);
   const d = S.prog.d;
   const chosen = [];
   // terugkomers: eerder niet zelf opgelost
-  S.retry.filter(id => getItem(id)).slice(0, boss ? 1 : 2).forEach(id => chosen.push(id));
+  S.retry.filter(id => getItem(id) && allowed.includes(getItem(id).type)).slice(0, boss ? 1 : 2).forEach(id => chosen.push(id));
   // eerst nog niet gespeelde puzzels uit het lesprogramma rond dit niveau, daarna de puzzelmaker
   const byType = {}, taken = new Set(chosen.map(id => stemSig(getItem(id))));
   shuffle(DATA.items.filter(it => it.lvl >= d - 1 && it.lvl <= d + 1 && !S.seen[it.id] && !chosen.includes(it.id) && !sigSeen(stemSig(it)))).forEach(it => { (byType[it.type] = byType[it.type] || []).push(it.id); });
-  const types = shuffle(Object.keys(TYPE_NAMES));
+  const types = shuffle(allowed);
   let guard = 0;
   while (chosen.length < n && guard++ < 50) {
     for (const t of types) {
@@ -670,7 +701,7 @@ function optionOrder(it) {
 }
 function startStop(stopIdx) {
   const boss = stopIdx === 4;
-  S.run = { world: S.prog.world, stop: stopIdx, boss, items: pickItems(boss ? PUZZLES_PER_BOSS : PUZZLES_PER_STOP, boss), idx: 0, res: [], started: Date.now(), cur: null };
+  S.run = { world: S.prog.world, stop: stopIdx, boss, items: pickItems(boss ? PUZZLES_PER_BOSS : PUZZLES_PER_STOP, boss, stopIdx), idx: 0, res: [], started: Date.now(), cur: null };
   save();
 }
 function curItem() { const r = S.run; return r && r.items[r.idx] ? getItem(r.items[r.idx].id) : null; }
@@ -683,6 +714,10 @@ function hintsFor(it) {
     case 'analogy': return ['ZEG: hoe verandert het eerste plaatje in het tweede?', 'REGEL: doe precies hetzelfde met het derde plaatje.'];
     case 'balance': return ['KIJK: begin bij de weegschaal met de minste dingen. Wat weet je daar zeker?', 'Vervang stap voor stap: zet in de vraag in plaats van een voorwerp wat het weegt.'];
     case 'grid': return ['Begin bij de aanwijzing die iets zeker zegt. Zet daar een ✓.', 'Zet een ✗ bij alles wat niet kan. Wat blijft er over?'];
+    case 'code': return ['KIJK naar de gok met de meeste zwarte bolletjes. Welke kleuren staan daar al op de goede plek?', 'CHECK elk antwoord: geeft het bij elke gok precies hetzelfde aantal ● en ○?'];
+    case 'sudoku': return ['KIJK naar de rij van het vraagteken. Welke vormen staan daar al?', 'Kijk ook naar de kolom en het blokje van 2 bij 2. Welke vorm mist er nog?'];
+    case 'mirror': return ['KIJK waar de spiegel staat. Wat dicht bij de spiegel zit, blijft dicht bij de spiegel.', 'Kies één gekleurd vakje en zoek waar het in de spiegel komt. CHECK dat bij elk vakje.'];
+    case 'route': return ['Zet je vinger op de robot en volg de pijlen van één antwoord, stap voor stap.', 'Botst de robot tegen een blok of loopt hij van het veld? Dan is dat antwoord niet goed.'];
     default: return ['KIJK goed: wat is de verbinding of wat verandert er steeds?', 'ZEG je regel hardop en CHECK of hij bij alles klopt.'];
   }
 }
@@ -1009,6 +1044,15 @@ function renderMap(app) {
 }
 
 /* ---- puzzle rendering (shared by kid play and parent review) ---- */
+function routeSVG(it) {
+  const n = it.n, w = 44, wl = new Set(it.walls.map(([r, c]) => r * n + c));
+  let o = `<svg viewBox="0 0 ${n * w + 4} ${n * w + 4}" role="img" aria-label="veld met robot en bal">`;
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) o += `<rect x="${2 + c * w}" y="${2 + r * w}" width="${w}" height="${w}" fill="${wl.has(r * n + c) ? '#3a3f5c' : '#e9f6ee'}" stroke="#9aa6c6" stroke-width="1.5"/>`;
+  const [sr, sc] = it.start, [gr, gc] = it.goal, x = 2 + sc * w, y = 2 + sr * w;
+  o += `<rect x="${x + 7}" y="${y + 9}" width="30" height="26" rx="6" fill="#2f6fe0" stroke="#0b0f20" stroke-width="2"/><circle cx="${x + 16}" cy="${y + 21}" r="4" fill="#fff"/><circle cx="${x + 28}" cy="${y + 21}" r="4" fill="#fff"/><line x1="${x + 22}" y1="${y + 9}" x2="${x + 22}" y2="${y + 3}" stroke="#0b0f20" stroke-width="2"/><circle cx="${x + 22}" cy="${y + 3}" r="2.5" fill="#e6334f"/>`;
+  o += icon('voetbal', 2 + gc * w + w / 2, 2 + gr * w + w / 2, 14);
+  return o + '</svg>';
+}
 function puzzleBody(it, order, mark) {
   // mark: {gone:[], right:idx|null, picked:[] , interactive:bool}
   const interactive = mark.interactive;
@@ -1033,6 +1077,14 @@ function puzzleBody(it, order, mark) {
       b = `<div class="lg"><ol>${it.clues.map(c => `<li>${esc(c)}</li>`).join('')}</ol><table><tr><th></th>${it.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${it.rows.map((r, ri) => `<tr><th>${esc(r)}</th>${it.cols.map((_, ci) => { const v = marks[ri + '-' + ci] || ''; return `<td>${interactive ? `<button type="button" data-cell="${ri}-${ci}" class="${v === '✗' ? 'x' : v === '✓' ? 'v' : ''}" aria-label="${esc(r)}, ${esc(it.cols[ci])}">${v}</button>` : ''}</td>`; }).join('')}</tr>`).join('')}</table></div>${interactive ? '<p class="small" style="color:var(--muted)">Tik op een vakje: één keer is ✗ (kan niet), twee keer is ✓ (zeker).</p>' : ''}<div class="bigq">${esc(it.subq || '')}</div>${optsHtml()}`;
       break;
     }
+    case 'code': {
+      const pegs = (b2, w2) => `<span class="pegs" aria-label="${b2} goed op de goede plek, ${w2} goede kleur op een andere plek">${'<i class="pb"></i>'.repeat(b2)}${'<i class="pw"></i>'.repeat(w2)}${!b2 && !w2 ? '<em>niets goed</em>' : ''}</span>`;
+      b = `<div class="codes">${it.guesses.map((g, i) => `<div class="crow"><span class="cn">Gok ${i + 1}</span><span class="cdots">${fig({ k: 'code', p: g.g })}</span>${pegs(g.b, g.w)}</div>`).join('')}</div>${optsHtml()}`;
+      break;
+    }
+    case 'sudoku': b = `<div class="sudo">${it.cells.map((f, i) => `<div class="sc ${i === it.qi ? 'q' : ''} ${i % 4 === 1 ? 'br' : ''} ${(i >> 2) === 1 ? 'bb' : ''}">${i === it.qi ? fig(null) : f ? fig(f) : ''}</div>`).join('')}</div>${optsHtml()}`; break;
+    case 'mirror': b = `<div class="qrow mir ${it.axis}">${cell(it.src)}<span class="spiegel" aria-label="spiegel"></span>${cell(null, true)}</div>${optsHtml()}`; break;
+    case 'route': b = `<div class="route">${routeSVG(it)}</div>${optsHtml()}`; break;
     default: b = optsHtml();
   }
   return b;
@@ -1116,6 +1168,10 @@ const KIND_TEXT = {
   'text:getallen': 'Schrijf de sprongen tussen de getallen klein eronder. Zie je een patroon in de sprongen?',
   'text:woorden': 'Lees de zinnen één voor één. Zet de namen op een rij of maak een tekening.',
   'grid': 'Gebruik het rooster: zet een ✗ als iets niet kan en een ✓ als het zeker is.',
+  'code': 'Er is een geheime code van drie kleuren. Bij elke gok zie je hints: ● is een goede kleur op de goede plek, ○ is een goede kleur op een andere plek.',
+  'sudoku': 'In elke rij, elke kolom en elk blokje van 2 bij 2 staat elke vorm precies één keer.',
+  'mirror': 'Stel je voor dat de streep een spiegel is. Wat zie je in de spiegel?',
+  'route': 'De robot loopt één vakje per pijl. Hij mag niet tegen een donker blok en niet van het veld af.',
 };
 function exampleFor(it) {
   const kind = kindOf(it), sig = stemSig(it);
@@ -1364,6 +1420,9 @@ function pPrint(body) {
     openPrint(list, title, sub);
   };
 }
+function printQ(it) {
+  return ({ code: 'Kraak de code. ● goede kleur, goede plek. ○ goede kleur, andere plek.', sudoku: 'Mini-sudoku: wat hoort op het vraagteken?', mirror: it.axis === 'h' ? 'Spiegel eronder: wat zie je?' : 'Spiegel rechts: wat zie je?', route: 'Welke pijlen brengen de robot naar de bal?' })[it.type] || questionText(it);
+}
 function answerOf(it, order) {
   const isFig = it.type === 'odd' || typeof it.opts[it.ans] === 'object';
   return isFig ? 'ABCDEFG'[order.indexOf(it.ans)] : String(it.opts[it.ans]);
@@ -1375,7 +1434,7 @@ function openPrint(list, title, sub) {
   const multi = pages.length > 1;
   const head = (n) => `<h1>Puzzelheld · ${esc(title)}${multi ? ` · blad ${n}` : ''}</h1>
       <div class="meta"><span>Naam: ${name || '________________'}</span><span>Datum: ________________</span></div>`;
-  const pq = (x, i) => `<div class="pq"><h3>${i + 1}. ${esc(questionText(x.it))}</h3>
+  const pq = (x, i) => `<div class="pq"><h3>${i + 1}. ${esc(printQ(x.it))}</h3>
     <div class="board">${puzzleBody(x.it, x.order, { gone: [], right: null, picked: [], interactive: false, locked: true })}</div>
     <div class="ansline">Antwoord: ________</div></div>`;
   const sheets = pages.map((pg, n) => {
@@ -1391,6 +1450,16 @@ function openPrint(list, title, sub) {
       <div class="answers"><h1>Antwoorden</h1><p class="tip">Voor papa of mama. Kijk samen na en laat ${name || 'je kind'} uitleggen hoe hij het deed.</p>${ans}</div>
     </div>`;
   box.hidden = false; box.scrollTop = 0;
+  // past een blad niet op één A4 (269 mm hoog binnen de marges), dan maken we de puzzels op dat blad iets kleiner
+  const maxH = 269 * 96 / 25.4 - 8;
+  box.querySelectorAll('.pg').forEach(pg => {
+    const grid = pg.querySelector('.pgrid');
+    for (let k = 0; k < 4; k++) {
+      const h = pg.getBoundingClientRect().height; if (h <= maxH) break;
+      const gh = grid.getBoundingClientRect().height, z = parseFloat(grid.style.zoom || 1);
+      grid.style.zoom = (z * Math.max(.5, (gh - (h - maxH)) / gh) * .98).toFixed(3);
+    }
+  });
   $('#pr-print').onclick = () => window.print();
   $('#pr-close').onclick = () => { box.hidden = true; box.innerHTML = ''; };
 }
