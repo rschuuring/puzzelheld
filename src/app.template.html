@@ -61,12 +61,15 @@ p { margin: 0; }
 /* start + forms */
 .logo { font-family: var(--display); font-size: clamp(40px, 8vw, 64px); line-height: 1; }
 .logo span { color: var(--red); text-shadow: 0 0 18px rgba(255,51,85,.6); }
-.pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 520px; width: 100%; margin: 0 auto; }
+.pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; max-width: 720px; width: 100%; margin: 0 auto; }
 .who-card { border: 0; color: #fff; cursor: pointer; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(56,225,255,.3); }
 .who-card:hover, .who-card.sel { box-shadow: inset 0 0 0 3px var(--cyan), 0 0 24px rgba(56,225,255,.3); }
 .who-card .big { width: 96px; height: 96px; border-radius: 24px; display: grid; place-items: center; overflow: hidden; }
 .who-card .big.k { background: linear-gradient(145deg, var(--red), var(--red-deep)); box-shadow: 0 0 0 3px var(--gold); }
 .who-card .big.p { background: #2a3870; }
+.who-card .big.n { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 2px rgba(56,225,255,.5); }
+.pselect { display: inline-flex; gap: 6px; align-items: center; }
+.pselect select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); font: inherit; }
 .who-card .big svg { width: 100%; height: 100%; }
 .who-card strong { font-family: var(--display); font-weight: 400; font-size: 22px; }
 .form { display: flex; flex-direction: column; gap: 10px; align-items: center; max-width: 420px; width: 100%; margin: 0 auto; }
@@ -333,17 +336,27 @@ const NUDGE_MS = 120000, SOUND_MS = 180000, PAUSE_MS = 30 * 60000;
 /* ===================== STATE ===================== */
 let KEY = 'puzzelheld-v1-lokaal';
 let USER = null;
+/* Eén opslag per ouder-account (R) met daarin meerdere spelers. S is de speler die nu actief is. */
 function fresh() {
   return {
-    v: 2, kid: null, parentHash: null, savedAt: 0,
+    id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kid: null, names: {},
     prog: { world: 0, stop: 0, season: 1, d: 11, recent: [] },
     run: null, attempts: [], stops: [], bosses: [], events: [], days: {}, inbox: [], seen: {}, retry: [],
   };
 }
-let S;
-function load() { try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : fresh(); } catch (e) { S = fresh(); } }
-function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* opslag niet beschikbaar: werkt alleen tijdens deze sessie */ } }
-function save() { S.savedAt = Date.now(); saveLocal(); if (ONLINE && USER) schedulePush(); }
+function freshRoot() { return { v: 3, savedAt: 0, parentHash: null, players: [] }; }
+function migrate(x) {
+  if (!x || typeof x !== 'object') return freshRoot();
+  if (Array.isArray(x.players)) return x;
+  const root = freshRoot(); root.savedAt = x.savedAt || 0; root.parentHash = x.parentHash || null;
+  if (x.kid) { const p = Object.assign({}, x); p.id = p.id || 'p1'; p.names = p.names || {}; delete p.v; delete p.savedAt; delete p.parentHash; root.players.push(p); }
+  return root;
+}
+let R = freshRoot(), S = null;
+function pick(id) { S = R.players.find(p => p.id === id) || null; return S; }
+function load() { let x = null; try { x = JSON.parse(localStorage.getItem(KEY)); } catch (e) { x = null; } R = migrate(x); S = null; }
+function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(R)); } catch (e) { /* opslag niet beschikbaar: werkt alleen tijdens deze sessie */ } }
+function save() { R.savedAt = Date.now(); saveLocal(); if (ONLINE && USER) schedulePush(); }
 
 /* Instellingen die bij dit apparaat horen (niet gedeeld tussen apparaten) */
 const DEV = 'puzzelheld-v1-apparaat';
@@ -361,7 +374,7 @@ function schedulePush() { clearTimeout(pushT); setSync('wait'); pushT = setTimeo
 async function push() {
   clearTimeout(pushT); pushT = null; if (!USER) return;
   try {
-    const { error } = await sb.from('puzzelheld_state').upsert({ user_id: USER.id, state: S, updated_at: new Date().toISOString() });
+    const { error } = await sb.from('puzzelheld_state').upsert({ user_id: USER.id, state: R, updated_at: new Date().toISOString() });
     if (error) throw error; setSync('ok');
   } catch (e) { setSync('off'); }
 }
@@ -372,9 +385,9 @@ async function pull() {
     const { data, error } = await sb.from('puzzelheld_state').select('state').eq('user_id', USER.id).maybeSingle();
     if (error) throw error;
     setSync('ok');
-    const remote = data && data.state;
-    if (remote && (remote.savedAt || 0) > (S.savedAt || 0)) { S = remote; saveLocal(); return true; }
-    if (!remote || (S.savedAt || 0) > (remote.savedAt || 0)) schedulePush();
+    const remote = data && data.state ? migrate(data.state) : null;
+    if (remote && (remote.savedAt || 0) > (R.savedAt || 0)) { const id = S && S.id; R = remote; saveLocal(); S = id ? pick(id) : null; return true; }
+    if (!remote || (R.savedAt || 0) > (remote.savedAt || 0)) schedulePush();
   } catch (e) { setSync('off'); }
   return false;
 }
@@ -745,17 +758,19 @@ function bindHud() {
 }
 
 function renderStart(app) {
-  const h = S.kid ? S.kid.hero : { skin: SKINS[2], hair: HAIRS[0], hairStyle: 'stekels', suit: SUITS[0], heroName: 'Held' };
+  const plus = '<svg viewBox="0 0 60 60" aria-hidden="true"><path d="M30 16 V44 M16 30 H44" stroke="#38e1ff" stroke-width="6" stroke-linecap="round"/></svg>';
   app.innerHTML = `<div class="kid"><div class="wrap" style="padding-top:48px;align-items:center;gap:22px">
     <div class="logo center">Puzzel<span>held</span></div>
     <p class="muted center">Wie gaat er spelen?</p>
     <div class="pick">
-      <button class="who-card" type="button" id="pick-kid"><span class="big k">${headSVG(h, S.kid ? S.kid.eq : {})}</span><strong>${esc(S.kid ? S.kid.name : 'Speler')}</strong></button>
+      ${R.players.filter(p => p.kid).map(p => `<button class="who-card" type="button" data-pid="${p.id}"><span class="big k">${headSVG(p.kid.hero, p.kid.eq)}</span><strong>${esc(p.kid.name)}</strong></button>`).join('')}
+      <button class="who-card" type="button" id="pick-new"><span class="big n">${plus}</span><strong>Nieuwe speler</strong></button>
       <button class="who-card" type="button" id="pick-par"><span class="big p"><svg viewBox="0 0 60 60" aria-hidden="true"><rect x="18" y="28" width="24" height="18" rx="3" fill="#38e1ff"/><path d="M23 28 V22 a7 7 0 0 1 14 0 V28" fill="none" stroke="#38e1ff" stroke-width="4"/></svg></span><strong>Ouder</strong></button>
     </div>
     <p class="small center muted" style="max-width:52ch">${ONLINE ? 'Versie 1. Je voortgang wordt online bewaard, dus je kunt op elk apparaat verder.' : 'Versie 1, lokale modus. De voortgang wordt alleen in deze browser bewaard.'}</p>
   </div></div>`;
-  $('#pick-kid').onclick = () => go('kidlogin');
+  app.querySelectorAll('[data-pid]').forEach(b => b.onclick = () => { pick(b.dataset.pid); go('kidlogin'); });
+  $('#pick-new').onclick = () => { S = fresh(); go('kidlogin'); };
   $('#pick-par').onclick = () => go('parentlogin');
 }
 function renderKidLogin(app) {
@@ -770,7 +785,7 @@ function renderKidLogin(app) {
         <input type="password" id="kpw2" placeholder="Nog een keer" aria-label="Wachtwoord nog een keer" autocomplete="new-password">`
       : `<h2 class="center" style="font-family:var(--display);font-weight:400">Hoi ${esc(S.kid.name)}!</h2>
         <input type="password" id="kpw1" placeholder="Jouw wachtwoord" aria-label="Wachtwoord" autocomplete="current-password">`}
-      <label class="chk"><input type="checkbox" id="krem" ${devGet().remember === false ? '' : 'checked'}> Onthoud mij op deze computer</label>
+      <label class="chk"><input type="checkbox" id="krem" checked> Onthoud mij op deze computer</label>
       <div class="err" id="err"></div>
       <div style="display:flex;gap:10px"><button class="ghost" type="button" id="back">Terug</button><button class="cta" type="submit">${first ? 'Verder' : 'Start'}</button></div>
     </form></div></div>`;
@@ -783,12 +798,13 @@ function renderKidLogin(app) {
       if (p1 !== $('#kpw2').value) { $('#err').textContent = 'De twee wachtwoorden zijn niet hetzelfde. Probeer het nog een keer.'; return; }
       S.kid = { name, pwHash: await hashPw(p1), hero: { skin: SKINS[2], hair: HAIRS[0], hairStyle: 'stekels', suit: SUITS[0], heroName: name }, eq: {}, owned: [], trophies: [], xp: 0, coins: 0, seenTypes: [], built: false, created: Date.now() };
     } else if ((await hashPw(p1)) !== S.kid.pwHash) { $('#err').textContent = 'Dat wachtwoord klopt niet. Vraag papa of mama als je het vergeten bent.'; return; }
-    devSet({ remember: $('#krem').checked }); save();
+    if (!R.players.includes(S)) R.players.push(S);
+    devSet({ remember: $('#krem').checked ? S.id : false }); save();
     go(S.kid.built ? 'map' : 'builder');
   };
 }
 function renderParentLogin(app) {
-  const first = !ONLINE && !S.parentHash;
+  const first = !ONLINE && !R.parentHash;
   app.innerHTML = `<div class="kid"><div class="wrap" style="padding-top:48px;align-items:center;gap:18px">
     <div class="logo center">Ouder<span>deel</span></div>
     <form class="form" id="f">
@@ -813,8 +829,8 @@ function renderParentLogin(app) {
     } else if (first) {
       if (p1.length < 4) { $('#err').textContent = 'Kies minstens 4 tekens.'; return; }
       if (p1 !== $('#ppw2').value) { $('#err').textContent = 'De wachtwoorden zijn niet hetzelfde.'; return; }
-      S.parentHash = await hashPw(p1); save();
-    } else if ((await hashPw(p1)) !== S.parentHash) { $('#err').textContent = 'Dat wachtwoord klopt niet.'; return; }
+      R.parentHash = await hashPw(p1); save();
+    } else if ((await hashPw(p1)) !== R.parentHash) { $('#err').textContent = 'Dat wachtwoord klopt niet.'; return; }
     ptab = 'overzicht'; go('p-main');
   };
 }
@@ -1086,16 +1102,20 @@ function renderShop(app) {
 /* ===================== PARENT ===================== */
 function weekStart() { const d = new Date(); d.setHours(0, 0, 0, 0); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow); return d.getTime(); }
 function renderParent(app) {
-  const openBoss = S.bosses.filter(b => !b.reviewed).length;
-  const fouten = S.attempts.filter(a => !a.first).length;
-  app.innerHTML = `<div class="ptop"><div class="wrap"><b>Ouderdeel${S.kid ? ' · ' + esc(S.kid.name) : ''}</b>
+  if (!S || !R.players.includes(S) || !S.kid) S = R.players.find(p => p.kid) || null;
+  const openBoss = S ? S.bosses.filter(b => !b.reviewed).length : 0;
+  const fouten = S ? S.attempts.filter(a => !a.first).length : 0;
+  const kids = R.players.filter(p => p.kid);
+  const who = kids.length > 1 ? `<span class="pselect"><label for="ppl">Speler</label><select id="ppl">${kids.map(p => `<option value="${p.id}" ${p === S ? 'selected' : ''}>${esc(p.kid.name)}</option>`).join('')}</select></span>` : (S ? esc(S.kid.name) : '');
+  app.innerHTML = `<div class="ptop"><div class="wrap"><b>Ouderdeel</b> ${who}
     <div class="tabs" role="tablist">${[['overzicht', 'Overzicht'], ['fouten', 'Fouten' + (fouten ? ` <span class="cnt">${fouten}</span>` : '')], ['eindbaas', 'Eindbaas nakijken' + (openBoss ? ` <span class="cnt">${openBoss}</span>` : '')], ['printen', 'Printen'], ['account', 'Account']].concat(TEST_MODE ? [['test', 'Testen']] : []).map(([k, l]) => `<button type="button" role="tab" class="${ptab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
     <button class="pbtn" type="button" id="pout">Uitloggen</button></div></div>
     <div class="wrap" id="pbody"></div>`;
   app.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { ptab = b.dataset.tab; renderParent(app); });
+  const sel = $('#ppl'); if (sel) sel.onchange = () => { pick(sel.value); PR.worlds = null; openBossIdx = null; renderParent(app); };
   $('#pout').onclick = () => go('start');
   const body = $('#pbody');
-  if (!S.kid) { body.innerHTML = `<div class="card"><h2>Nog geen speler</h2><p>Er is nog geen speler. Laat je kind op het startscherm op "Speler" klikken en een eigen wachtwoord kiezen.</p></div>`; if (ptab === 'test') pTest(body); if (ptab === 'account') pAccount(body); return; }
+  if (!S) { body.innerHTML = `<div class="card"><h2>Nog geen speler</h2><p>Er is nog geen speler. Klik op het startscherm op "Nieuwe speler" en kies een eigen wachtwoord.</p></div>`; if (ptab === 'test') pTest(body); if (ptab === 'account') pAccount(body); return; }
   ({ overzicht: pOverview, fouten: pErrors, eindbaas: pBoss, printen: pPrint, account: pAccount, test: pTest })[ptab](body);
 }
 function pctFirst(list) { return list.length ? Math.round(list.filter(a => a.first).length / list.length * 100) : null; }
@@ -1277,25 +1297,25 @@ function pAccount(body) {
   body.innerHTML = `
     <div class="card"><h2>Account</h2>
       ${ONLINE ? `<p>Ingelogd als <b>${esc(USER.email)}</b>. De voortgang wordt online bewaard en is op elk apparaat met dit account hetzelfde.</p>
-        <p class="small">Laatst bewaard: ${S.savedAt ? new Date(S.savedAt).toLocaleString('nl-NL') : 'nog niets'} · ${st}</p>
+        <p class="small">Laatst bewaard: ${R.savedAt ? new Date(R.savedAt).toLocaleString('nl-NL') : 'nog niets'} · ${st}</p>
         <div class="pform"><button class="pbtn" type="button" id="syncnow">Nu opslaan</button></div>`
       : '<p>Lokale modus: de voortgang staat alleen in deze browser op dit apparaat.</p>'}
     </div>
-    ${S.kid ? `<div class="card"><h2>Namen in de puzzels</h2>
+    ${S && S.kid ? `<div class="card"><h2>Namen in de puzzels</h2>
       <p class="small">Sommige puzzels gaan over je kind en zijn broertje. Pas ze hier aan als je wilt.</p>
       <div class="pform"><label for="nkid">Naam kind</label><input type="text" id="nkid" maxlength="20" value="${esc(S.kid.name)}">
         <label for="nbro">Naam broertje</label><input type="text" id="nbro" maxlength="20" value="${esc((S.names || {}).brother || '')}" placeholder="Marcus">
         <label for="nnick">Bijnaam broertje</label><input type="text" id="nnick" maxlength="20" value="${esc((S.names || {}).nick || '')}" placeholder="Macage"></div>
       <div class="pform"><button class="pbtn dark" type="button" id="nset">Namen opslaan</button><span class="small" id="nmsg"></span></div></div>` : ''}
-    ${S.kid ? `<div class="card"><h2>Wachtwoord van ${esc(S.kid.name)}</h2>
+    ${S && S.kid ? `<div class="card"><h2>Wachtwoord van ${esc(S.kid.name)}</h2>
       <p class="small">Is ${esc(S.kid.name)} zijn wachtwoord vergeten? Kies hier samen een nieuw. Het wachtwoord wordt niet leesbaar bewaard, dus ook jij kunt het oude niet terugzien.</p>
       <div class="pform"><input type="password" id="kn1" placeholder="Nieuw wachtwoord" aria-label="Nieuw wachtwoord" autocomplete="new-password"><input type="password" id="kn2" placeholder="Nog een keer" aria-label="Nog een keer" autocomplete="new-password"><button class="pbtn dark" type="button" id="kset">Opslaan</button><span class="small" id="kmsg"></span></div></div>` : ''}
     ${ONLINE ? `<div class="card"><h2>Dit apparaat</h2>
       <p>Uitloggen betekent: op dit apparaat moet daarna eerst weer iemand met het ouder-account inloggen voordat ${esc(KN())} verder kan. De voortgang blijft online bewaard.</p>
       ${confirmOut ? '<div class="confirm"><b>Uitloggen op dit apparaat?</b> <button class="pbtn danger" type="button" id="out2">Ja, uitloggen</button><button class="pbtn" type="button" id="out0">Nee</button></div>' : '<div class="pform"><button class="pbtn" type="button" id="out1">Uitloggen op dit apparaat</button></div>'}</div>` : ''}
-    <div class="card"><h2>Opnieuw beginnen</h2>
-      <p>Wist de held, de voortgang en alle resultaten${ONLINE ? ', op alle apparaten' : ''}. Handig als je eerst zelf hebt getest voordat ${esc(KN())} echt begint.</p>
-      ${confirmReset ? '<div class="confirm"><b>Echt alles wissen?</b> Dit kan niet ongedaan worden gemaakt. <button class="pbtn danger" type="button" id="rs2">Ja, wis alles</button><button class="pbtn" type="button" id="rs0">Nee</button></div>' : '<div class="pform"><button class="pbtn danger" type="button" id="rs1">Alles wissen</button></div>'}</div>`;
+    ${S && S.kid ? `<div class="card"><h2>Speler ${esc(S.kid.name)} verwijderen</h2>
+      <p>Verwijdert deze speler met held, voortgang en alle resultaten${ONLINE ? ', op alle apparaten' : ''}. Handig voor een testspeler. Andere spelers blijven gewoon bestaan.</p>
+      ${confirmReset ? `<div class="confirm"><b>${esc(S.kid.name)} echt verwijderen?</b> Dit kan niet ongedaan worden gemaakt. <button class="pbtn danger" type="button" id="rs2">Ja, verwijder</button><button class="pbtn" type="button" id="rs0">Nee</button></div>` : '<div class="pform"><button class="pbtn danger" type="button" id="rs1">Speler verwijderen</button></div>'}</div>` : ''}`;
   const b = id => document.getElementById(id);
   if (b('syncnow')) b('syncnow').onclick = async () => { await push(); pAccount(body); toast(syncState === 'ok' ? 'Opgeslagen.' : 'Geen internet. Het wordt later opgeslagen.'); };
   if (b('nset')) b('nset').onclick = () => {
@@ -1314,7 +1334,7 @@ function pAccount(body) {
   if (b('out2')) b('out2').onclick = async () => { confirmOut = false; if (pushT) await push(); devSet({ remember: false }); await sb.auth.signOut(); };
   if (b('rs1')) b('rs1').onclick = () => { confirmReset = true; pAccount(body); };
   if (b('rs0')) b('rs0').onclick = () => { confirmReset = false; pAccount(body); };
-  if (b('rs2')) b('rs2').onclick = () => { confirmReset = false; S = fresh(); save(); devSet({ remember: false }); go('start'); };
+  if (b('rs2')) b('rs2').onclick = () => { confirmReset = false; const gone = S; R.players = R.players.filter(p => p !== gone); if (devGet().remember === gone.id) devSet({ remember: false }); S = null; save(); toast(esc(gone.kid.name) + ' is verwijderd.'); renderParent($('#app')); };
 }
 let confirmWipe = false;
 function pTest(body) {
@@ -1324,11 +1344,11 @@ function pTest(body) {
     <div class="pform"><button class="pbtn" type="button" id="coins">Geef ${esc(KN())} 300 munten</button><span class="small">Om de winkel te testen.</span></div>
     ${confirmWipe ? `<div class="confirm"><b>Echt alles wissen?</b> Account, held, voortgang en wachtwoorden worden verwijderd. <button class="pbtn danger" type="button" id="wipe2">Ja, wis alles</button><button class="pbtn" type="button" id="wipe0">Nee</button></div>` : `<div class="pform"><button class="pbtn danger" type="button" id="wipe">Alles wissen en opnieuw beginnen</button></div>`}
     <p class="small">Doe je dit voordat ${esc(KN())} echt begint? Wis dan alles eerst, zodat zijn eigen resultaten schoon zijn.</p></div>`;
-  $('#sim').onclick = async () => { if (!S.kid) await simKid(); simulate(5); toast('5 dagen gesimuleerd.'); renderParent($('#app')); };
-  $('#coins').onclick = () => { if (!S.kid) { toast('Maak eerst een account voor je kind.'); return; } S.kid.coins += 300; save(); toast('300 munten gegeven.'); };
+  $('#sim').onclick = async () => { if (!S) { S = fresh(); R.players.push(S); } if (!S.kid) await simKid(); simulate(5); toast('5 dagen gesimuleerd.'); renderParent($('#app')); };
+  $('#coins').onclick = () => { if (!S || !S.kid) { toast('Maak eerst een account voor je kind.'); return; } S.kid.coins += 300; save(); toast('300 munten gegeven.'); };
   const w = $('#wipe'); if (w) w.onclick = () => { confirmWipe = true; pTest(body); };
   const w0 = $('#wipe0'); if (w0) w0.onclick = () => { confirmWipe = false; pTest(body); };
-  const w2 = $('#wipe2'); if (w2) w2.onclick = () => { confirmWipe = false; S = fresh(); save(); go('start'); };
+  const w2 = $('#wipe2'); if (w2) w2.onclick = () => { confirmWipe = false; const t = R.savedAt; R = freshRoot(); R.savedAt = t; S = null; save(); devSet({ remember: false }); go('start'); };
 }
 async function simKid() {
   S.kid = { name: 'Testkind', pwHash: await hashPw('test'), hero: { skin: SKINS[2], hair: HAIRS[0], hairStyle: 'stekels', suit: SUITS[0], heroName: 'Testkind' }, eq: {}, owned: [], trophies: [], xp: 0, coins: 0, seenTypes: Object.keys(TYPE_NAMES), built: true, created: Date.now() };
@@ -1374,7 +1394,8 @@ function simulate(nDays) {
 
 /* ===================== BOOT ===================== */
 function startView() {
-  view = S.kid && devGet().remember ? (S.kid.built ? 'map' : 'builder') : 'start';
+  const id = devGet().remember;
+  view = typeof id === 'string' && pick(id) && S.kid ? (S.kid.built ? 'map' : 'builder') : 'start';
   render();
 }
 async function startUser() {
@@ -1399,6 +1420,6 @@ boot();
 document.addEventListener('visibilitychange', async () => {
   if (document.hidden) { if (pushT) push(); return; }
   lastAct = Date.now();
-  if (ONLINE && USER && view !== 'play' && view !== 'newpw' && view !== 'auth') { if (await pull()) { if (!S.kid && view !== 'p-main') view = 'start'; render(); } }
+  if (ONLINE && USER && view !== 'play' && view !== 'newpw' && view !== 'auth') { if (await pull()) { if (view !== 'p-main' && (!S || !S.kid)) view = 'start'; render(); } }
 });
 </script>
