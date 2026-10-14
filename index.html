@@ -1020,17 +1020,19 @@ function pickItems(n, boss, stopIdx) {
   const d = S.prog.d;
   const chosen = [];
   // terugkomers: eerder niet zelf opgelost
-  S.retry.filter(id => getItem(id) && allowed.includes(getItem(id).type)).slice(0, boss ? 1 : 2).forEach(id => chosen.push(id));
+  S.retry.filter(id => getItem(id) && allowed.includes(getItem(id).type)).slice(0, Math.min(n, boss ? 1 : 2)).forEach(id => chosen.push(id));
   // eerst nog niet gespeelde puzzels uit het lesprogramma rond dit niveau, daarna de puzzelmaker
   const byType = {}, taken = new Set(chosen.map(id => stemSig(getItem(id))));
   shuffle(DATA.items.filter(it => it.lvl >= d - 1 && it.lvl <= d + 1 && !S.seen[it.id] && !chosen.includes(it.id) && !sigSeen(stemSig(it)))).forEach(it => { (byType[it.type] = byType[it.type] || []).push(it.id); });
   const types = shuffle(allowed);
+  const MAX_HANDMADE = Math.ceil(n / 2); let handmade = 0;
   let guard = 0;
   while (chosen.length < n && guard++ < 50) {
     for (const t of types) {
       if (chosen.length >= n) break;
-      let id = (byType[t] || []).shift();
+      let id = handmade < MAX_HANDMADE ? (byType[t] || []).shift() : null;
       if (id && taken.has(stemSig(getItem(id)))) id = null;
+      if (id) handmade++;
       if (!id && typeof GEN !== 'undefined') id = genId(t, d, taken);
       if (id && !chosen.includes(id)) { chosen.push(id); taken.add(stemSig(getItem(id))); }
     }
@@ -1649,7 +1651,7 @@ function pOverview(body) {
       <div class="card"><h2>Per soort puzzel (laatste 2 weken)</h2>${rows ? `<div class="tbl"><table class="data"><thead><tr><th>Soort</th><th>Meteen goed</th><th>Aantal</th><th>Trend</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="small">Nog geen puzzels gemaakt.</p>'}</div>
     </div>
     <div class="two">
-      <div class="card"><h2>Waar staat hij</h2>
+      <div class="card"><h2>Waar staat ${esc(S.kid.name)}</h2>
         <p>Wereld <b>${(S.prog.world % WORLDS.length) + 1}: ${esc(worldOf(S.prog.world).name)}</b>${S.prog.season > 1 ? ` (seizoen ${S.prog.season})` : ''}, stop ${S.prog.stop + 1} van 5.</p>
         <p>Moeilijkheid: stap <b>${S.prog.d}</b> van 20, dat is het ${weekLabel(S.prog.d)}. De app begon op stap 11, het begin van week 3. Puzzels op deze stap passen meestal bij <b>${groupLabel(S.prog.d)}</b>.</p>
         <p class="small">Dit is een schatting op basis van de soort puzzels, geen meting. ${esc(KN())} ziet deze informatie niet.</p>
@@ -1660,7 +1662,13 @@ function pOverview(body) {
         <p class="small">Een paar lage cijfers achter elkaar? Dan is het misschien te moeilijk of te lang. Praat er even met hem over.</p></div>
     </div>`;
   const tb = $('#toboss'); if (tb) tb.onclick = () => { ptab = 'eindbaas'; renderParent($('#app')); };
-  $('#setdgo').onclick = () => { const to = +$('#setd').value, p = S.prog; if (to === p.d) return; S.events.push({ at: Date.now(), type: 'set', from: p.d, to }); p.d = to; p.recent = []; save(); toast(`Moeilijkheid staat nu op stap ${to}.`); renderParent($('#app')); };
+  $('#setdgo').onclick = () => {
+    const to = +$('#setd').value, p = S.prog; if (to === p.d) return;
+    S.events.push({ at: Date.now(), type: 'set', from: p.d, to }); p.d = to; p.recent = [];
+    // een stop die al bezig is: de puzzels die nog moeten komen, worden opnieuw gekozen op de nieuwe stap
+    const r = S.run;
+    if (r) { const keep = r.idx + (r.cur ? 1 : 0); r.items = r.items.slice(0, keep).concat(pickItems(r.items.length - keep, r.boss, r.stop)); }
+    save(); toast(`Moeilijkheid staat nu op stap ${to}.`); renderParent($('#app')); };
 }
 function reviewCard(a, extra = '') {
   const it = getItem(a.k); if (!it) return '';
