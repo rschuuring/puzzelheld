@@ -240,7 +240,7 @@ const GEN = (() => {
       const wrong = R.shuf(all.filter(c => key(c) !== key(sec))).sort((a, b) => score(b) - score(a));
       const o = opties({ k: 'code', p: sec }, wrong.map(c => ({ k: 'code', p: c })));
       if (!o) continue;
-      return { type: 'code', q: 'Kraak de geheime code! ● = goede kleur op de goede plek. ○ = goede kleur, maar op een andere plek.', guesses, opts: o, ans: 0, why: `${sec.join(' – ')}. Alleen deze code geeft bij elke gok precies het goede aantal ● en ○.` };
+      return { type: 'code', q: 'Kraak de geheime code! Een zwart bolletje = goede kleur op de goede plek. Een wit bolletje = goede kleur, maar op een andere plek.', guesses, opts: o, ans: 0, why: `${sec.join(' – ')}. Alleen deze code geeft bij elke gok precies het goede aantal zwarte en witte bolletjes.` };
     }
     return null;
   }

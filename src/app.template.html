@@ -726,7 +726,7 @@ function hintsFor(it) {
     case 'analogy': return ['ZEG: hoe verandert het eerste plaatje in het tweede?', 'REGEL: doe precies hetzelfde met het derde plaatje.'];
     case 'balance': return ['KIJK: begin bij de weegschaal met de minste dingen. Wat weet je daar zeker?', 'Vervang stap voor stap: zet in de vraag in plaats van een voorwerp wat het weegt.'];
     case 'grid': return ['Begin bij de aanwijzing die iets zeker zegt. Zet daar een ✓.', 'Zet een ✗ bij alles wat niet kan. Wat blijft er over?'];
-    case 'code': return ['KIJK naar de gok met de meeste zwarte bolletjes. Welke kleuren staan daar al op de goede plek?', 'CHECK elk antwoord: geeft het bij elke gok precies hetzelfde aantal ● en ○?'];
+    case 'code': return ['KIJK naar de gok met de meeste zwarte bolletjes. Welke kleuren staan daar al op de goede plek?', 'CHECK elk antwoord: geeft het bij elke gok precies hetzelfde aantal zwarte en witte bolletjes?'];
     case 'sudoku': return ['KIJK naar de rij van het vraagteken. Welke vormen staan daar al?', 'Kijk ook naar de kolom en het blokje van 2 bij 2. Welke vorm mist er nog?'];
     case 'mirror': return ['KIJK waar de spiegel staat. Wat dicht bij de spiegel zit, blijft dicht bij de spiegel.', 'Kies één gekleurd vakje en zoek waar het in de spiegel komt. CHECK dat bij elk vakje.'];
     case 'route': return ['Zet je vinger op de robot en volg de pijlen van één antwoord, stap voor stap.', 'Botst de robot tegen een blok of loopt hij van het veld? Dan is dat antwoord niet goed.'];
@@ -1183,7 +1183,7 @@ const KIND_TEXT = {
   'text:getallen': 'Schrijf de sprongen tussen de getallen klein eronder. Zie je een patroon in de sprongen?',
   'text:woorden': 'Lees de zinnen één voor één. Zet de namen op een rij of maak een tekening.',
   'grid': 'Gebruik het rooster: zet een ✗ als iets niet kan en een ✓ als het zeker is.',
-  'code': 'Er is een geheime code van drie kleuren. Bij elke gok zie je hints: ● is een goede kleur op de goede plek, ○ is een goede kleur op een andere plek.',
+  'code': 'Er is een geheime code van drie kleuren. Bij elke gok zie je hints: een zwart bolletje is een goede kleur op de goede plek, een wit bolletje is een goede kleur op een andere plek.',
   'sudoku': 'In elke rij, elke kolom en elk blokje van 2 bij 2 staat elke vorm precies één keer.',
   'mirror': 'Stel je voor dat de streep een spiegel is. Wat zie je in de spiegel?',
   'route': 'De robot loopt één vakje per pijl. Hij mag niet tegen een donker blok en niet van het veld af.',
@@ -1442,7 +1442,7 @@ function pPrint(body) {
   };
 }
 function printQ(it) {
-  return ({ code: 'Kraak de code. ● goede kleur, goede plek. ○ goede kleur, andere plek.', sudoku: 'Mini-sudoku: wat hoort op het vraagteken?', mirror: it.axis === 'h' ? 'Spiegel eronder: wat zie je?' : 'Spiegel rechts: wat zie je?', route: 'Welke pijlen brengen de robot naar de bal?' })[it.type] || questionText(it);
+  return ({ code: 'Kraak de code. Zwart bolletje: goede kleur, goede plek. Wit bolletje: goede kleur, andere plek.', sudoku: 'Mini-sudoku: wat hoort op het vraagteken?', mirror: it.axis === 'h' ? 'Spiegel eronder: wat zie je?' : 'Spiegel rechts: wat zie je?', route: 'Welke pijlen brengen de robot naar de bal?' })[it.type] || questionText(it);
 }
 function answerOf(it, order) {
   const isFig = it.type === 'odd' || typeof it.opts[it.ans] === 'object';
