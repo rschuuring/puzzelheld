@@ -910,12 +910,21 @@ function renderParentLogin(app) {
       : `<input type="password" id="ppw1" placeholder="Ouderwachtwoord" aria-label="Ouderwachtwoord" autocomplete="current-password">`}
       <div class="err" id="err"></div>
       <div style="display:flex;gap:10px"><button class="ghost" type="button" id="back">Terug</button><button class="cta" type="submit" id="pgo">Open</button></div>
+      ${ONLINE ? '<div class="center"><button class="linkbtn" type="button" id="pforgot">Wachtwoord vergeten?</button></div>' : ''}
     </form></div></div>`;
   $('#back').onclick = () => go('start');
+  if ($('#pforgot')) $('#pforgot').onclick = async () => {
+    $('#pforgot').disabled = true;
+    try {
+      const { error } = await sb.auth.resetPasswordForEmail(USER.email, { redirectTo: location.origin + location.pathname });
+      if (error) throw error;
+      $('#err').style.color = '#7ee2a8'; $('#err').textContent = `Er is een mail gestuurd naar ${USER.email}. Klik op de link in die mail (kijk ook bij spam) om een nieuw wachtwoord te kiezen.`;
+    } catch (err) { $('#err').textContent = 'Dat lukte niet: ' + (/fetch|network/i.test(err.message) ? 'geen verbinding met internet.' : err.message); $('#pforgot').disabled = false; }
+  };
   $('#f').onsubmit = async e => {
     e.preventDefault(); const p1 = $('#ppw1').value;
     if (ONLINE) {
-      $('#pgo').disabled = true; $('#err').textContent = '';
+      $('#pgo').disabled = true; $('#err').textContent = ''; $('#err').style.color = '';
       try {
         const { error } = await sb.auth.signInWithPassword({ email: USER.email, password: p1 });
         if (error) { $('#err').textContent = /fetch|network/i.test(error.message) ? 'Geen verbinding met internet. Probeer het zo nog eens.' : 'Dat wachtwoord klopt niet.'; $('#pgo').disabled = false; return; }
