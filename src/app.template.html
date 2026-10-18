@@ -685,10 +685,15 @@ function pickItems(n, boss, stopIdx) {
   const allowed = typesFor(stopIdx, boss);
   const d = S.prog.d;
   const chosen = [];
-  // terugkomers: eerder niet zelf opgelost
-  S.retry.filter(id => getItem(id) && allowed.includes(getItem(id).type)).slice(0, Math.min(n, boss ? 1 : 2)).forEach(id => chosen.push(id));
+  // terugkomers: soorten die eerder niet meteen lukten komen terug, maar als nieuwe puzzel (nooit precies dezelfde)
+  const taken = new Set();
+  S.retry.filter(id => getItem(id) && allowed.includes(getItem(id).type)).slice(0, Math.min(n, boss ? 1 : 2)).forEach(id => {
+    const nid = typeof GEN !== 'undefined' ? genId(getItem(id).type, d, taken) : null;
+    S.retry = S.retry.filter(x => x !== id);
+    if (nid && !chosen.includes(nid)) { chosen.push(nid); taken.add(stemSig(getItem(nid))); }
+  });
   // eerst nog niet gespeelde puzzels uit het lesprogramma rond dit niveau, daarna de puzzelmaker
-  const byType = {}, taken = new Set(chosen.map(id => stemSig(getItem(id))));
+  const byType = {};
   shuffle(DATA.items.filter(it => it.lvl >= d - 1 && it.lvl <= d + 1 && !S.seen[it.id] && !chosen.includes(it.id) && !sigSeen(stemSig(it)))).forEach(it => { (byType[it.type] = byType[it.type] || []).push(it.id); });
   const types = shuffle(allowed);
   const MAX_HANDMADE = Math.ceil(n / 2); let handmade = 0;
@@ -767,7 +772,7 @@ function finishItem(solved) {
   addXP(xp); c.xp = xp;
   S.seen[it.id] = { n: (S.seen[it.id] ? S.seen[it.id].n : 0) + 1, at: now };
   (S.sigs = S.sigs || {})[stemSig(it)] = now;
-  if (!solved || c.tries > 0) { if (!S.retry.includes(it.id)) S.retry.push(it.id); }
+  if (!solved || c.tries > 0) { if (!S.retry.includes(it.id)) S.retry.push(it.id); S.retry = S.retry.slice(-6); }
   else S.retry = S.retry.filter(x => x !== it.id);
   const att = { k: it.id, type: it.type, lvl: it.lvl, at: now, w: r.world, s: r.stop, season: S.prog.season, boss: r.boss, picks: c.picks.slice(), order: r.items[r.idx].order, first: solved && c.tries === 0, hints: Math.min(c.tries, 2), solved, ms, removed: c.removed.slice() };
   S.attempts.push(att); c.att = S.attempts.length - 1;
@@ -1168,11 +1173,14 @@ function renderPlay() {
 /* Soort puzzel in detail, zodat het voorbeeld echt lijkt op de puzzel die erna komt. */
 function kindOf(it) {
   switch (it.type) {
-    case 'series': { const ks = it.seq.filter(Boolean).map(f => f.k); if (ks.includes('pijl')) return 'series:pijl'; if (ks.includes('raster')) return 'series:raster'; return it.seq.filter(Boolean).some(f => (f.n || 1) > 1) ? 'series:aantal' : 'series:vorm'; }
+    case 'series': { const ks = it.seq.filter(Boolean).map(f => f.k); if (ks.includes('pijl')) return 'series:pijl'; if (ks.includes('raster')) return it.seq.filter(Boolean).some(f => (f.p || []).length > 1) ? 'series:tweeblok' : 'series:raster'; return it.seq.filter(Boolean).some(f => (f.n || 1) > 1) ? 'series:aantal' : 'series:vorm'; }
     case 'matrix': { const cells = it.grid.flat().filter(Boolean); return `matrix:${it.grid.length}x${it.grid[0].length}` + (it.grid.length > 2 && cells.some(f => (f.n || 1) > 1) ? ':aantal' : ''); }
     case 'balance': return it.facts.length === 1 ? 'balance:een' : it.facts[0][0].length > 1 ? 'balance:min' : 'balance:keten';
     case 'text': return /^Welk getal|\d+\s*·\s*\d+/.test(it.q || '') ? 'text:getallen' : 'text:woorden';
-    case 'grid': return 'grid';
+    case 'grid': return it.rows.length > 3 ? 'grid:4' : 'grid';
+    case 'odd': return /breekt die regel/.test(it.why || '') ? 'odd:koppel' : 'odd';
+    case 'code': return it.guesses[0].g.length > 3 ? 'code:4' : 'code';
+    case 'analogy': { const [a, b] = it.abc, ks = ['k', 'c', 's', 'n', 'r', 'f']; return ks.filter(k => (a[k] || '') !== (b[k] || '')).length >= 3 ? 'analogy:3' : 'analogy'; }
     default: return it.type;
   }
 }
@@ -1192,6 +1200,11 @@ const KIND_TEXT = {
   'text:getallen': 'Schrijf de sprongen tussen de getallen klein eronder. Zie je een patroon in de sprongen?',
   'text:woorden': 'Lees de zinnen één voor één. Zet de namen op een rij of maak een tekening.',
   'grid': 'Gebruik het rooster: zet een ✗ als iets niet kan en een ✓ als het zeker is.',
+  'grid:4': 'Nu zijn het vier personen. Gebruik het rooster: als in een rij drie ✗ staan, moet het vierde vakje een ✓ zijn.',
+  'odd:koppel': 'Twee dingen horen steeds bij elkaar, bijvoorbeeld een vorm en een kleur, of hoeveel en vol of leeg. Eén plaatje houdt zich niet aan die regel.',
+  'series:tweeblok': 'Er lopen twee blokjes tegelijk. Volg eerst het ene blokje, en dan het andere. Waar staan ze allebei de volgende keer?',
+  'analogy:3': 'Nu veranderen er drie dingen tegelijk. Zoek ze alle drie, en doe ze dan allemaal met het derde plaatje.',
+  'code:4': 'De geheime code heeft nu vier kleuren. Zwart bolletje: goede kleur op de goede plek. Wit bolletje: goede kleur, maar op een andere plek.',
   'code': 'Er is een geheime code van drie kleuren. Bij elke gok zie je hints: een zwart bolletje is een goede kleur op de goede plek, een wit bolletje is een goede kleur op een andere plek.',
   'sudoku': 'In elke rij, elke kolom en elk blokje van 2 bij 2 staat elke vorm precies één keer.',
   'mirror': 'Stel je voor dat de streep een spiegel is. Wat zie je in de spiegel?',
@@ -1500,6 +1513,7 @@ function pAccount(body) {
   const st = { ok: 'opgeslagen', wait: 'bezig met opslaan', off: 'geen internet, wordt later opgeslagen' }[syncState];
   body.innerHTML = `
     <div class="card"><h2>Account</h2>
+      <p class="small">Versie van de app: ${BUILD ? new Date(BUILD * 1000).toLocaleString('nl-NL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'test'}</p>
       ${ONLINE ? `<p>Ingelogd als <b>${esc(USER.email)}</b>. De voortgang wordt online bewaard en is op elk apparaat met dit account hetzelfde.</p>
         <p class="small">Laatst bewaard: ${R.savedAt ? new Date(R.savedAt).toLocaleString('nl-NL') : 'nog niets'} · ${st}</p>
         <div class="pform"><button class="pbtn" type="button" id="syncnow">Nu opslaan</button></div>`
