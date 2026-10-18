@@ -178,6 +178,31 @@ p { margin: 0; }
 .tryon { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; background: rgba(255,207,61,.08); border: 1px solid rgba(255,207,61,.5); }
 .tryon .row { display: flex; gap: 10px; flex-wrap: wrap; }
 
+/* prijzenkast */
+.kastwrap { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; padding: 14px; border-radius: 18px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.kastwrap h3 { width: 100%; margin: 0; font-family: 'Russo One', sans-serif; letter-spacing: 1px; color: var(--gold); font-size: 18px; }
+.kasthero { width: 120px; flex: none; }
+.kasthero svg { width: 100%; height: auto; }
+.kast { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 0; background: linear-gradient(#6b3f1f, #4a2a12); border: 4px solid #3a200c; border-radius: 12px; padding: 8px 8px 0; }
+.plank { display: flex; flex-wrap: wrap; gap: 6px; min-height: 66px; align-items: flex-end; padding: 4px 4px 0; border-bottom: 8px solid #8a5a2b; margin-bottom: 8px; }
+.prijs { display: flex; flex-direction: column; align-items: center; width: 64px; text-align: center; }
+.prijs .ic { font-size: 34px; line-height: 1.1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.prijs small { font-size: 10px; line-height: 1.15; color: #ffe9c2; }
+.prijs.leeg .ic { opacity: .25; filter: grayscale(1); }
+.medaille { display: inline-flex; width: 30px; height: 30px; border-radius: 50%; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #3a200c; background: radial-gradient(#e9eef6, #9aa6b8); border: 3px solid #c7d0dd; }
+
+/* eindbaas */
+.bossstage { position: relative; display: flex; justify-content: center; }
+.bossstage svg { width: 210px; height: auto; }
+.speech { background: #fff; color: #0b0f20; border-radius: 16px; padding: 10px 14px; font-weight: 700; position: relative; }
+.bossbar { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 420px; padding: 6px 10px; border-radius: 14px; background: rgba(255,51,85,.12); border: 1px solid rgba(255,51,85,.5); }
+.bossbar svg { width: 44px; height: 44px; flex: none; }
+.bossbar .hp { flex: 1; height: 12px; border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; }
+.bossbar .hp i { display: block; height: 100%; background: linear-gradient(90deg, #ff3355, #ff8a3d); transition: width .4s; }
+.bossbar span { font-size: 13px; font-weight: 700; white-space: nowrap; }
+.trofee { position: relative; display: inline-block; }
+.trofee .beker { position: absolute; left: 50%; top: -6px; transform: translateX(-50%); font-size: 64px; filter: drop-shadow(0 0 14px rgba(255,207,61,.9)); }
+
 /* ---------- parent ---------- */
 .ptop { background: var(--panel); border-bottom: 1px solid var(--line); }
 .ptop .wrap { padding-block: 10px; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -241,6 +266,15 @@ table.data th { font-size: 12px; text-transform: uppercase; letter-spacing: .05e
   @keyframes pop { from { transform: scale(.85); opacity: 0; } }
   .wave { animation: wave 1s ease-in-out infinite; transform-origin: 50% 90%; }
   @keyframes wave { 50% { transform: rotate(-6deg); } }
+  .bossin { animation: bossin .9s cubic-bezier(.3,1.6,.5,1) both; }
+  @keyframes bossin { from { transform: translateY(-60px) scale(.3); opacity: 0; } }
+  .bossshake { animation: bossshake .5s ease-in-out .9s 3; }
+  @keyframes bossshake { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+  .bossbar.hit svg { animation: hit .4s ease-out; }
+  @keyframes hit { 30% { transform: translateX(-6px) rotate(-8deg); filter: brightness(2); } 60% { transform: translateX(5px); } }
+  .trofee .beker { animation: beker 1.2s cubic-bezier(.3,1.5,.5,1) .3s both, glow 1.6s ease-in-out 1.5s infinite; }
+  @keyframes beker { from { top: -160px; opacity: 0; transform: translateX(-50%) rotate(-30deg) scale(.4); } }
+  @keyframes glow { 50% { filter: drop-shadow(0 0 26px rgba(255,207,61,1)); } }
 }
 
 /* nieuwe puzzelsoorten */
@@ -393,7 +427,28 @@ const SHOP = [
   { id: 'e-bal', slot: 'emblem', name: 'Voetbal-embleem', price: 50, color: '#ffffff' },
 ];
 const SLOT_NAMES = { mask: 'Maskers', cape: 'Capes', shoes: 'Schoenen', emblem: 'Emblemen' };
-const TROPHY_PRICE = 250;
+// spullen voor de prijzenkast (de bekers van de werelden win je bij de eindbaas)
+const KAST = [
+  { id: 'k-bal', name: 'Gesigneerde bal', icon: '⚽', price: 80 },
+  { id: 'k-pizza', name: 'Gouden pizza', icon: '🍕', price: 90 },
+  { id: 'k-shirt', name: 'Voetbalshirt', icon: '👕', price: 100 },
+  { id: 'k-racket', name: 'Gouden racket', icon: '🏸', price: 120 },
+  { id: 'k-controller', name: 'Gamecontroller', icon: '🎮', price: 120 },
+  { id: 'k-board', name: 'Snowboard', icon: '🏂', price: 150 },
+  { id: 'k-auto', name: 'Raceauto', icon: '🏎️', price: 180 },
+  { id: 'k-gitaar', name: 'Rockgitaar', icon: '🎸', price: 200 },
+  { id: 'k-kroon', name: 'Kampioenskroon', icon: '👑', price: 300 },
+];
+// de eindbaas van elke wereld: naam, kleur en wat hij vasthoudt
+const BOSSES = [
+  { name: 'Doctor Chaos', color: '#7b2cbf', prop: '⚡' }, { name: 'De Muur', color: '#1d3f9a', prop: '🧤' },
+  { name: 'IJsreus Brrr', color: '#5fb4e6', prop: '❄️' }, { name: 'Turbo Tornado', color: '#d62828', prop: '🏁' },
+  { name: 'Smash Master', color: '#f08a12', prop: '🏸' }, { name: 'Koning Kokos', color: '#7f4f24', prop: '🥥' },
+  { name: 'Glitch', color: '#2a9d3f', prop: '👾' }, { name: 'Chef Brandaan', color: '#b8342a', prop: '🔥' },
+  { name: 'DJ Valsnoot', color: '#a0228a', prop: '🎵' }, { name: 'Het Rommelmonster', color: '#6b7280', prop: '🧸' },
+  { name: 'De Grote Kampioen', color: '#b58600', prop: '🏆' },
+];
+const BOSS_WIN = 8; // zoveel van de 10 meteen goed om de beker te winnen
 const PUZZLES_PER_STOP = 8, PUZZLES_PER_BOSS = 10;
 const NUDGE_MS = 120000, SOUND_MS = 180000, PAUSE_MS = 30 * 60000;
 
@@ -683,7 +738,7 @@ const CLASSIC_TYPES = Object.keys(TYPE_NAMES).filter(t => !NEW_TYPES.includes(t)
 function typesFor(stopIdx, boss) { return boss ? Object.keys(TYPE_NAMES) : stopIdx === 3 ? NEW_TYPES : CLASSIC_TYPES; }
 function pickItems(n, boss, stopIdx) {
   const allowed = typesFor(stopIdx, boss);
-  const d = S.prog.d;
+  const d = Math.min(20, S.prog.d + (boss ? 1 : 0)); // de eindbaas is net iets moeilijker
   const chosen = [];
   // terugkomers: soorten die eerder niet meteen lukten komen terug, maar als nieuwe puzzel (nooit precies dezelfde)
   const taken = new Set();
@@ -715,6 +770,10 @@ function optionOrder(it) {
   const idx = it.opts.map((_, i) => i);
   if (it.opts.every(o => typeof o === 'number')) return idx.sort((a, b) => it.opts[a] - it.opts[b]);
   return shuffle(idx);
+}
+function startRematch(wi) {
+  S.run = { world: wi, stop: 4, boss: true, rematch: true, items: pickItems(PUZZLES_PER_BOSS, true, 4), idx: 0, res: [], started: Date.now(), cur: null };
+  save();
 }
 function startStop(stopIdx) {
   const boss = stopIdx === 4;
@@ -796,7 +855,11 @@ function finishStop() {
   else if (pct < 60 && p.d > 1) { S.events.push({ at: Date.now(), type: 'down', from: p.d, to: p.d - 1, pcts: [pct] }); p.d--; p.recent = []; }
   if (r.boss) {
     S.bosses.push({ w: r.world, season: p.season, at: Date.now(), atts: r.res.map(x => x.ai), stars: {}, reviewed: false });
-    p.world++; p.stop = 0; if (p.world % WORLDS.length === 0) p.season++;
+    const wi = r.world % WORLDS.length, k = S.kid; k.medals = k.medals || []; k.rematch = k.rematch || [];
+    rec.won = first >= BOSS_WIN;
+    if (rec.won) { if (!k.trophies.includes(wi)) k.trophies.push(wi); k.rematch = k.rematch.filter(x => x !== wi); }
+    else { if (!k.medals.includes(wi)) k.medals.push(wi); if (!k.trophies.includes(wi) && !k.rematch.includes(wi)) k.rematch.push(wi); }
+    if (!r.rematch) { p.world++; p.stop = 0; if (p.world % WORLDS.length === 0) p.season++; }
   } else p.stop = r.stop + 1;
   S.lastStop = { rec: S.stops.length - 1, xp, bonus, coins: r.res.reduce((a, x) => a + (S.attempts[x.ai].solved ? 0 : 0), 0) };
   S.run = null; save();
@@ -1029,6 +1092,46 @@ function renderBuilder(app) {
   $('#done').onclick = () => { h.heroName = ($('#hname').value.trim() || S.kid.name).slice(0, 16); const first = !S.kid.built; S.kid.built = true; save(); go('map'); if (first) toast('Welkom in Heldenstad, ' + esc(h.heroName) + '!'); };
 }
 
+function bossSVG(wi, cls = '') {
+  const b = BOSSES[wi % BOSSES.length], c = b.color, dk = shade(c, .6);
+  return `<svg class="${cls}" viewBox="0 0 200 220" role="img" aria-label="${esc(b.name)}">
+    <ellipse cx="100" cy="208" rx="62" ry="9" fill="rgba(0,0,0,.35)"/>
+    <path d="M58 40 L46 8 L78 30 Z M142 40 L154 8 L122 30 Z" fill="#ffcf3d" stroke="#0b0f20" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M100 26 C150 26 172 70 170 120 C168 170 140 200 100 200 C60 200 32 170 30 120 C28 70 50 26 100 26 Z" fill="${c}" stroke="#0b0f20" stroke-width="5"/>
+    <path d="M40 140 C70 156 130 156 160 140 C156 176 132 198 100 198 C68 198 44 176 40 140 Z" fill="${dk}"/>
+    <path d="M58 82 L92 96 M142 82 L108 96" stroke="#0b0f20" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="76" cy="106" r="15" fill="#fff" stroke="#0b0f20" stroke-width="4"/><circle cx="124" cy="106" r="15" fill="#fff" stroke="#0b0f20" stroke-width="4"/>
+    <circle cx="80" cy="109" r="6" fill="#0b0f20"/><circle cx="120" cy="109" r="6" fill="#0b0f20"/>
+    <path d="M70 146 Q100 128 130 146 L124 154 L116 146 L108 154 L100 146 L92 154 L84 146 L76 154 Z" fill="#fff" stroke="#0b0f20" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M30 120 Q8 112 10 88" stroke="#0b0f20" stroke-width="12" stroke-linecap="round" fill="none"/><path d="M30 120 Q8 112 10 88" stroke="${c}" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <text x="174" y="104" font-size="44" text-anchor="middle">${b.prop}</text>
+  </svg>`;
+}
+function bossBar(r) {
+  const hits = r.res.filter(x => x.first).length, b = BOSSES[r.world % BOSSES.length];
+  const left = Math.max(0, BOSS_WIN - hits);
+  return `<div class="bossbar ${r.cur && r.cur.done && r.cur.solved && !r.cur.tries ? 'hit' : ''}">${bossSVG(r.world)}<div class="hp" aria-hidden="true"><i style="width:${Math.round(left / BOSS_WIN * 100)}%"></i></div><span>${left ? `Nog ${left} raak` : 'Verslagen!'}</span></div>`;
+}
+function showBossIntro(wi, go2) {
+  const b = BOSSES[wi % BOSSES.length], w = WORLDS[wi % WORLDS.length];
+  const o = document.createElement('div'); o.className = 'overlay';
+  o.innerHTML = `<div class="modal pop" style="gap:14px"><div class="bossstage"><div class="bossin"><div class="bossshake">${bossSVG(wi)}</div></div></div>
+    <div class="speech">Ik ben ${esc(b.name)}! Niemand komt langs ${esc(w.boss)}... Raak mij ${BOSS_WIN} keer met een puzzel die je meteen goed hebt, dan win je de ${esc(w.trophy.name)} ${w.trophy.icon}!</div>
+    <button class="cta" type="button" id="fight">Kom maar op!</button></div>`;
+  document.body.appendChild(o);
+  $('#fight').onclick = () => { o.remove(); go2(); };
+}
+function rematchHTML() {
+  const k = S.kid, list = (k.rematch || []).filter(wi => !k.trophies.includes(wi) && wi < S.prog.world);
+  if (!list.length || S.run) return '';
+  return `<div class="banner"><div>Je kunt nog een beker winnen! Daag de eindbaas opnieuw uit.</div><div style="display:flex;gap:8px;flex-wrap:wrap">${list.map(wi => `<button class="ghost" type="button" data-rematch="${wi}">${esc(BOSSES[wi].name)} (${esc(WORLDS[wi].name)})</button>`).join('')}</div></div>`;
+}
+function kastHTML() {
+  const k = S.kid, medals = (k.medals || []).filter(wi => !k.trophies.includes(wi)), kast = KAST.filter(x => (k.kast || []).includes(x.id));
+  const bekers = WORLDS.map((w, i) => k.trophies.includes(i) ? `<div class="prijs"><span class="ic">${w.trophy.icon}</span><small>${esc(w.trophy.name)}</small></div>` : medals.includes(i) ? `<div class="prijs"><span class="medaille">${i + 1}</span><small>Medaille ${esc(w.name)}</small></div>` : i <= S.prog.world ? `<div class="prijs leeg"><span class="ic">🏆</span><small>Nog te winnen</small></div>` : '').join('');
+  const spullen = kast.length ? kast.map(x => `<div class="prijs"><span class="ic">${x.icon}</span><small>${esc(x.name)}</small></div>`).join('') : '<div class="prijs leeg"><span class="ic">⭐</span><small>Koop iets in de winkel</small></div>';
+  return `<div class="kastwrap"><h3>Mijn prijzenkast</h3><div class="kasthero">${heroSVG(k.hero, k.eq)}</div><div class="kast"><div class="plank">${bekers}</div><div class="plank">${spullen}</div></div></div>`;
+}
 function renderMap(app) {
   const p = S.prog, w = worldOf(p.world), wi = p.world % WORLDS.length;
   const nodes = NODES.map(([x, y], i) => {
@@ -1058,10 +1161,13 @@ function renderMap(app) {
     <div class="map">${svg}</div>
     <div class="mapfoot"><button class="cta" type="button" id="play">${resume}</button>
       <div class="wlist">${prev ? `<div class="wchip done"><b>${esc(prev.name)}</b><span>klaar ★</span></div>` : ''}<div class="wchip lock"><b>${esc(next.name)}</b><span>volgende wereld</span></div></div></div>
+    ${rematchHTML()}
+    ${kastHTML()}
     <div><button class="ghost" type="button" id="edit-hero">Held aanpassen</button></div>
   </div></div>`;
   bindHud();
-  const start = () => { if (!S.run) startStop(p.stop); go('play'); };
+  const start = () => { if (S.run) return go('play'); if (p.stop === 4) return showBossIntro(p.world, () => { startStop(4); go('play'); }); startStop(p.stop); go('play'); };
+  app.querySelectorAll('[data-rematch]').forEach(b => b.onclick = () => { const wi = +b.dataset.rematch; if (S.run) return go('play'); showBossIntro(wi, () => { startRematch(wi); go('play'); }); });
   $('#play').onclick = start;
   const n = app.querySelector('[data-go]'); if (n) { n.onclick = start; n.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); start(); } }; }
   $('#edit-hero').onclick = () => go('builder');
@@ -1156,6 +1262,7 @@ function renderPlay() {
   const total = r.items.length;
   app.innerHTML = `<div class="kid">${hud(w.name + (r.boss ? ' · eindbaas' : ''), r.boss ? w.boss : w.stops[r.stop])}<div class="wrap">
     <div class="xp" style="max-width:420px;flex:none;width:100%"><div class="lab"><span>Puzzel <b>${r.idx + 1}</b> van ${total}</span>${it.bonus ? '<span style="color:var(--gold);font-weight:700">★ Bonuspuzzel</span>' : ''}</div><div class="bar"><i style="width:${Math.round(r.idx / total * 100)}%"></i></div></div>
+    ${r.boss ? bossBar(r) : ''}
     <div class="steps" aria-label="Denkstappen">${['KIJK', 'ZEG', 'REGEL', 'CHECK'].map((s, i) => `<span class="${i === stepOn ? 'on' : ''}">${s}</span>`).join('')}</div>
     <div class="task"><button class="iconbtn" type="button" id="say" aria-label="Lees de opdracht voor"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#38e1ff"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="#38e1ff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button><span>${esc(questionText(it))}</span></div>
     <div class="board">${puzzleBody(it, order, mark)}</div>
@@ -1225,10 +1332,15 @@ function exampleBody(ex) {
 function showStopDone(rec, xp, bonus, run) {
   const o = document.createElement('div'); o.className = 'overlay';
   const coins = run.res.reduce((a, x) => a + (S.attempts[x.ai] ? 0 : 0), 0);
-  o.innerHTML = `<div class="modal pop"><div class="bigicon">${heroSVG(S.kid.hero, S.kid.eq)}</div>
-    <h2>${run.boss ? 'Eindbaas verslagen!' : 'Stop gehaald!'}</h2>
+  const bw = WORLDS[run.world % WORLDS.length], bb = BOSSES[run.world % WORLDS.length];
+  const top = run.boss && rec.won
+    ? `<div class="bigicon trofee">${heroSVG(S.kid.hero, S.kid.eq)}<span class="beker" aria-hidden="true">${bw.trophy.icon}</span></div><h2>${esc(bb.name)} is verslagen!</h2><p>Je had er <b>${rec.first} van de ${rec.n}</b> meteen goed. Je wint de <b style="color:var(--gold)">${esc(bw.trophy.name)}</b> ${bw.trophy.icon}. Hij staat nu in je prijzenkast!</p>`
+    : run.boss
+    ? `<div class="bigicon">${heroSVG(S.kid.hero, S.kid.eq)}</div><h2>Goed gevochten!</h2><p>Je had er <b>${rec.first} van de ${rec.n}</b> meteen goed. Dat levert een medaille op voor je prijzenkast. Met ${BOSS_WIN} goed win je de beker: je kunt ${esc(bb.name)} later opnieuw uitdagen.</p>`
+    : `<div class="bigicon">${heroSVG(S.kid.hero, S.kid.eq)}</div><h2>Stop gehaald!</h2>`;
+  o.innerHTML = `<div class="modal pop">${top}
     <div class="summary"><span>+${xp} XP</span>${bonus ? `<span>+${bonus} munten: alles zonder hint!</span>` : ''}<span>${rec.n} puzzels</span></div>
-    ${run.boss ? `<p class="muted">Een nieuwe wereld gaat open! Kijk de eindbaas later samen met papa of mama na. Dan kun je nog uitleg-sterren verdienen.</p>` : ''}
+    ${run.boss && !run.rematch ? `<p class="muted">Een nieuwe wereld gaat open! Kijk de eindbaas later samen met papa of mama na. Dan kun je nog uitleg-sterren verdienen.</p>` : ''}
     <p>Hoe leuk vond je dit? Kies een cijfer.</p>
     <div class="fun">${Array.from({ length: 10 }, (_, i) => `<button type="button" data-fun="${i + 1}">${i + 1}</button>`).join('')}</div></div>`;
   document.body.appendChild(o);
@@ -1250,20 +1362,21 @@ function shopIcon(x) {
 let tryItem = null;
 function renderShop(app) {
   const k = S.kid;
-  const reached = Math.min(S.prog.world, WORLDS.length - 1);
   const tx = tryItem && tryItem.startsWith('t:') ? null : SHOP.find(x => x.id === tryItem);
-  const ti = tryItem && tryItem.startsWith('t:') ? +tryItem.slice(2) : null;
+  const ti = tryItem && tryItem.startsWith('t:') ? tryItem.slice(2) : null;
   const eqShown = tx ? Object.assign({}, k.eq, { [tx.slot]: tx.id }) : k.eq;
   const cats = Object.keys(SLOT_NAMES).map(slot => `<div class="cat"><h3>${SLOT_NAMES[slot]}</h3><div class="items">${SHOP.filter(x => x.slot === slot).map(x => {
     const own = k.owned.includes(x.id), on = k.eq[slot] === x.id, trying = tx && tx.id === x.id;
     return `<button class="item ${own ? 'owned' : ''} ${on ? 'on' : ''} ${trying ? 'trying' : ''}" type="button" data-item="${x.id}"><span class="ic">${shopIcon(x)}</span><b>${esc(x.name)}</b><span class="price">${own ? (on ? 'Aan ✓' : 'Van jou · aantrekken') : trying ? 'Aan het passen' : `<span class="coin">M</span>${x.price}`}</span></button>`;
   }).join('')}</div></div>`).join('');
-  const trophies = `<div class="cat"><h3>Prijzenkast</h3><div class="items">${WORLDS.map((w, i) => {
-    const own = k.trophies.includes(i), open = i <= reached;
-    return `<button class="item special ${own ? 'owned' : ''} ${!open && !own ? 'locked' : ''} ${ti === i ? 'trying' : ''}" type="button" data-trophy="${i}" ${!open && !own ? 'disabled' : ''}><span class="ic">${w.trophy.icon}</span><b>${esc(w.trophy.name)}</b><span class="price">${own ? 'In je prijzenkast ✓' : open ? `<span class="coin">M</span>${TROPHY_PRICE}` : esc(w.name) + ' · op slot'}</span></button>`;
+  k.kast = k.kast || [];
+  const trophies = `<div class="cat"><h3>Voor je prijzenkast</h3><p class="small" style="margin:0 0 8px;color:var(--muted)">De bekers van de werelden win je door de eindbaas te verslaan.</p><div class="items">${KAST.map(x => {
+    const own = k.kast.includes(x.id);
+    return `<button class="item special ${own ? 'owned' : ''} ${ti === x.id ? 'trying' : ''}" type="button" data-trophy="${x.id}"><span class="ic" style="font-size:40px">${x.icon}</span><b>${esc(x.name)}</b><span class="price">${own ? 'In je prijzenkast ✓' : `<span class="coin">M</span>${x.price}`}</span></button>`;
   }).join('')}</div></div>`;
-  const price = tx ? tx.price : ti !== null ? TROPHY_PRICE : 0, name = tx ? tx.name : ti !== null ? WORLDS[ti].trophy.name : '';
-  const panel = (tx || ti !== null) ? `<div class="tryon" role="status"><b>${tx ? 'Zo staat het je!' : `${WORLDS[ti].trophy.icon} ${esc(name)}`}</b>
+  const kx = ti !== null ? KAST.find(x => x.id === ti) : null;
+  const price = tx ? tx.price : kx ? kx.price : 0, name = tx ? tx.name : kx ? kx.name : '';
+  const panel = (tx || kx) ? `<div class="tryon" role="status"><b>${tx ? 'Zo staat het je!' : `${kx.icon} ${esc(name)}`}</b>
       <span>${esc(name)} kost <span class="coin">M</span>${price}. ${k.coins >= price ? 'Wil je het kopen?' : `Je hebt nog ${price - k.coins} munten nodig. Puzzelen levert munten op!`}</span>
       <div class="row">${k.coins >= price ? `<button class="cta" type="button" id="buy">Kopen</button>` : ''}<button class="ghost" type="button" id="nobuy">${k.coins >= price ? 'Annuleren' : 'Terug'}</button></div></div>` : '';
   app.innerHTML = `<div class="kid">${hud('Heldenwinkel', 'Pas en koop')}<div class="wrap"><div class="shop">
@@ -1276,13 +1389,13 @@ function renderShop(app) {
     tryItem = tryItem === x.id ? null : x.id; renderShop(app);
   });
   app.querySelectorAll('[data-trophy]').forEach(b => b.onclick = () => {
-    const i = +b.dataset.trophy; if (k.trophies.includes(i)) return;
-    tryItem = tryItem === 't:' + i ? null : 't:' + i; renderShop(app);
+    const id = b.dataset.trophy; if (k.kast.includes(id)) return;
+    tryItem = tryItem === 't:' + id ? null : 't:' + id; renderShop(app);
   });
   const nb = $('#nobuy'); if (nb) nb.onclick = () => { tryItem = null; renderShop(app); };
   const bb = $('#buy'); if (bb) bb.onclick = () => {
     if (tx) { if (k.coins < tx.price) return; k.coins -= tx.price; k.owned.push(tx.id); k.eq[tx.slot] = tx.id; tryItem = null; save(); renderShop(app); toast(`Gekocht: ${esc(tx.name)}!`); }
-    else if (ti !== null) { if (k.coins < TROPHY_PRICE) return; k.coins -= TROPHY_PRICE; k.trophies.push(ti); tryItem = null; save(); renderShop(app); toast(`${WORLDS[ti].trophy.icon} ${esc(WORLDS[ti].trophy.name)} staat in je prijzenkast!`); }
+    else if (kx) { if (k.coins < kx.price) return; k.coins -= kx.price; k.kast.push(kx.id); tryItem = null; save(); renderShop(app); toast(`${kx.icon} ${esc(kx.name)} staat in je prijzenkast!`); }
   };
 }
 
